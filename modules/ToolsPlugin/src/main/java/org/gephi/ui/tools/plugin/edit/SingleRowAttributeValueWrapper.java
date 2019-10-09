@@ -41,37 +41,34 @@
  */
 package org.gephi.ui.tools.plugin.edit;
 
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.type.DynamicType;
-import org.gephi.dynamic.api.DynamicModel;
-import org.gephi.dynamic.api.DynamicModel.TimeFormat;
-import org.gephi.graph.api.Attributable;
-import org.gephi.graph.api.Attributes;
+import org.gephi.graph.api.AttributeUtils;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.Element;
+import org.gephi.graph.api.TimeFormat;
+import org.joda.time.DateTimeZone;
 
 /**
  *
- * @author Eduardo Ramos<eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class SingleRowAttributeValueWrapper implements EditWindowUtils.AttributeValueWrapper {
 
-        private Attributes row;
-        private AttributeColumn column;
-        private TimeFormat currentTimeFormat;
+        private final Element row;
+        private final Column column;
+        private final TimeFormat currentTimeFormat;
+        private final DateTimeZone dateTimeZone;
 
-        public SingleRowAttributeValueWrapper(Attributable row, AttributeColumn column, TimeFormat currentTimeFormat) {
-            this.row = row.getAttributes();
+        public SingleRowAttributeValueWrapper(Element row, Column column, TimeFormat currentTimeFormat, DateTimeZone dateTimeZone) {
+            this.row = row;
             this.column = column;
             this.currentTimeFormat = currentTimeFormat;
+            this.dateTimeZone = dateTimeZone;
         }
 
         private String convertToStringIfNotNull() {
-            Object value = row.getValue(column.getIndex());
+            Object value = row.getAttribute(column);
             if (value != null) {
-                if (value instanceof DynamicType) {
-                    return ((DynamicType) value).toString(currentTimeFormat == DynamicModel.TimeFormat.DOUBLE);
-                } else {
-                    return value.toString();
-                }
+                return AttributeUtils.print(value, currentTimeFormat, dateTimeZone);
             } else {
                 return null;
             }
@@ -79,92 +76,92 @@ public class SingleRowAttributeValueWrapper implements EditWindowUtils.Attribute
         
         @Override
         public Byte getValueByte() {
-            return (Byte) row.getValue(column.getIndex());
+            return (Byte) row.getAttribute(column);
         }
 
         @Override
         public void setValueByte(Byte object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Short getValueShort() {
-            return (Short) row.getValue(column.getIndex());
+            return (Short) row.getAttribute(column);
         }
 
         @Override
         public void setValueShort(Short object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Character getValueCharacter() {
-            return (Character) row.getValue(column.getIndex());
+            return (Character) row.getAttribute(column);
         }
 
         @Override
         public void setValueCharacter(Character object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public String getValueString() {
-            return (String) row.getValue(column.getIndex());
+            return (String) row.getAttribute(column);
         }
 
         @Override
         public void setValueString(String object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Double getValueDouble() {
-            return (Double) row.getValue(column.getIndex());
+            return (Double) row.getAttribute(column);
         }
 
         @Override
         public void setValueDouble(Double object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Float getValueFloat() {
-            return (Float) row.getValue(column.getIndex());
+            return (Float) row.getAttribute(column);
         }
 
         @Override
         public void setValueFloat(Float object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Integer getValueInteger() {
-            return (Integer) row.getValue(column.getIndex());
+            return (Integer) row.getAttribute(column);
         }
 
         @Override
         public void setValueInteger(Integer object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Boolean getValueBoolean() {
-            return (Boolean) row.getValue(column.getIndex());
+            return (Boolean) row.getAttribute(column);
         }
 
         @Override
         public void setValueBoolean(Boolean object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
         public Long getValueLong() {
-            return (Long) row.getValue(column.getIndex());
+            return (Long) row.getAttribute(column);
         }
 
         @Override
         public void setValueLong(Long object) {
-            row.setValue(column.getIndex(), object);
+            row.setAttribute(column, object);
         }
 
         @Override
@@ -174,6 +171,6 @@ public class SingleRowAttributeValueWrapper implements EditWindowUtils.Attribute
 
         @Override
         public void setValueAsString(String value) {
-            row.setValue(column.getIndex(), column.getType().parse(value));
+            row.setAttribute(column, AttributeUtils.parse(value, column.getTypeClass()));
         }
     }

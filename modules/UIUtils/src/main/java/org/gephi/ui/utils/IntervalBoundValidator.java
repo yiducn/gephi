@@ -42,18 +42,21 @@
 package org.gephi.ui.utils;
 
 import javax.swing.text.JTextComponent;
+import org.gephi.graph.api.AttributeUtils;
 import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Validator;
+import org.openide.util.NbBundle;
 
 /**
- * Utils class to validate a string that contains a valid title for a column of
- * a
- * <code>AttributeTable</code>.
+ * Utils class to validate a single timestamp/datetime or an interval of a start and end timestamp/datetime.
  *
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class IntervalBoundValidator implements Validator<String> {
 
+    /**
+     * If not null, interval start &lt;= end is also validated.
+     */
     private JTextComponent intervalStartTextField = null;
 
     public IntervalBoundValidator() {
@@ -65,28 +68,27 @@ public class IntervalBoundValidator implements Validator<String> {
 
     @Override
     public boolean validate(Problems prblms, String componentName, String value) {
-        return false;
-//        try {
-//            double time = DynamicParser.parseTime(value);
-//            if (intervalStartTextField != null) {
-//                //Also validate that this (end time) is greater or equal than start time.
-//                try {
-//                    double startTime = DynamicParser.parseTime(intervalStartTextField.getText());
-//                    if (time < startTime) {
-//                        prblms.add(NbBundle.getMessage(IntervalBoundValidator.class, "IntervalBoundValidator.invalid.interval.message"));
-//                        return false;
-//                    } else {
-//                        return true;
-//                    }
-//                } catch (ParseException parseException) {
-//                    return true;
-//                }
-//            } else {
-//                return true;
-//            }
-//        } catch (ParseException ex) {
-//            prblms.add(NbBundle.getMessage(IntervalBoundValidator.class, "IntervalBoundValidator.invalid.bound.message"));
-//            return false;
-//        }
+        try {
+            double time = AttributeUtils.parseDateTimeOrTimestamp(value);
+            if (intervalStartTextField != null) {
+                //Also validate that this (end time) is greater or equal than start time.
+                try {
+                    double startTime = AttributeUtils.parseDateTimeOrTimestamp(intervalStartTextField.getText());
+                    if (time < startTime) {
+                        prblms.add(NbBundle.getMessage(IntervalBoundValidator.class, "IntervalBoundValidator.invalid.interval.message"));
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } catch (Exception parseException) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        } catch (Exception ex) {
+            prblms.add(NbBundle.getMessage(IntervalBoundValidator.class, "IntervalBoundValidator.invalid.bound.message"));
+            return false;
+        }
     }
 }

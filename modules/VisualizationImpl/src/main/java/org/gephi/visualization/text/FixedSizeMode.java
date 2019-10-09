@@ -45,6 +45,7 @@ import javax.swing.ImageIcon;
 import org.gephi.visualization.VizController;
 import org.gephi.visualization.apiimpl.GraphDrawable;
 import org.gephi.visualization.model.node.NodeModel;
+import org.openide.util.NbBundle;
 
 /**
  *
@@ -67,12 +68,12 @@ public class FixedSizeMode implements SizeMode {
 
     @Override
     public float getSizeFactor3d(float sizeFactor, NodeModel model) {
-        return sizeFactor / drawable.getViewportWidth() * model.getCameraDistance();
+        return sizeFactor / drawable.getViewportWidth() * drawable.getCameraLocation()[2];
     }
 
     @Override
     public String getName() {
-        return "Fixed";
+        return NbBundle.getMessage(FixedSizeMode.class, "FixedSizeMode.name");
     }
 
     @Override

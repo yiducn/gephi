@@ -42,24 +42,87 @@
 package org.gephi.io.importer.api;
 
 /**
- *
- * @author mbastian
+ * Column draft used by containers to represent future attribute columns.
+ * 
+ * @author Mathieu Bastian
  */
 public interface ColumnDraft {
 
+    /**
+     * Gets the column's identifier.
+     * <p>
+     * This identifier is unique across all columns.
+     *
+     * @return column's id
+     */
     public String getId();
 
+    /**
+     * Gets the column's title.
+     *
+     * @return column's title or null if empty
+     */
     public String getTitle();
 
+    /**
+     * Gets the column's type.
+     *
+     * @return column's type
+     */
     public Class getTypeClass();
+    
+    /**
+     * Gets the column's resolved (final) type taking into account the container settings and whether the column is dynamic or not.
+     *
+     * @param container Container
+     * @return column's final type
+     */
+    public Class getResolvedTypeClass(ContainerUnloader container);
 
+    /**
+     * Gets the column's default value.
+     *
+     * @return default value or null if empty
+     */
     public Object getDefaultValue();
+    
+    /**
+     * Gets the column's resolved (final) default value taking into account the container settings and whether the column is dynamic or not.
+     *
+     * @param container Container
+     * @return default value or null if empty
+     */
+    public Object getResolvedDefaultValue(ContainerUnloader container);
 
+    /**
+     * Returns true if this column is dynamic.
+     *
+     * @return true if dynamic, false otherwise
+     */
     public boolean isDynamic();
 
+    /**
+     * Sets the column's title.
+     *
+     * @param title column title
+     */
     public void setTitle(String title);
 
+    /**
+     * Sets the column's default value.
+     * <p>
+     * The default default value is <code>null</code>.
+     *
+     * @param value default value
+     */
     public void setDefaultValue(Object value);
 
+    /**
+     * Sets the column's default value as a string.
+     * <p>
+     * The <code>value</code> will be parsed according to the column's type.
+     *
+     * @param value value to parse and to be set as default
+     */
     public void setDefaultValueString(String value);
 }

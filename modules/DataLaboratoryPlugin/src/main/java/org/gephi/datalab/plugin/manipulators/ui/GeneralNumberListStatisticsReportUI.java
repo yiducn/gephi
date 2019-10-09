@@ -43,13 +43,14 @@ package org.gephi.datalab.plugin.manipulators.ui;
 
 import java.math.BigDecimal;
 import javax.swing.JPanel;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.datalab.spi.DialogControls;
 import org.gephi.datalab.spi.Manipulator;
 import org.gephi.datalab.spi.ManipulatorUI;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulator;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulatorUI;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.Table;
 import org.gephi.ui.components.JFreeChartDialog;
 import org.gephi.ui.components.SimpleHTMLReport;
 import org.gephi.ui.utils.ChartsUtils;
@@ -59,14 +60,14 @@ import org.openide.windows.WindowManager;
 
 /**
  * UI for NumberColumnStatisticsReport AttributeColumnsManipulator.
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel implements AttributeColumnsManipulatorUI, ManipulatorUI {
 
-    private Number[] numbers;
-    private String dataName;
-    private String dialogTitle;
-    private BigDecimal[] statistics;
+    private final Number[] numbers;
+    private final String dataName;
+    private final String dialogTitle;
+    private final BigDecimal[] statistics;
     private JFreeChart boxPlot, scatterPlot, histogram;
     private JFreeChartDialog boxPlotDialog, scatterPlotDialog, histogramDialog;
     private SimpleHTMLReport reportDialog;
@@ -92,9 +93,11 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         setChartControlsEnabled(statistics != null);//Disable chart controls if no numbers available
     }
 
-    public void setup(AttributeColumnsManipulator m, AttributeTable table, AttributeColumn column, DialogControls dialogControls) {
+    @Override
+    public void setup(AttributeColumnsManipulator m, GraphModel graphModel, Table table, Column column, DialogControls dialogControls) {
     }
 
+    @Override
     public void setup(Manipulator m, DialogControls dialogControls) {
     }
 
@@ -108,6 +111,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         divisionsComboBox.setEnabled(enabled);
     }
 
+    @Override
     public void unSetup() {
         if (reportDialog != null) {
             reportDialog.dispose();
@@ -123,14 +127,17 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         }
     }
 
+    @Override
     public String getDisplayName() {
         return dialogTitle;
     }
 
+    @Override
     public JPanel getSettingsPanel() {
         return this;
     }
 
+    @Override
     public boolean isModal() {
         return false;
     }
@@ -173,6 +180,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         configureBoxPlotButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/wooden-box.png"))); // NOI18N
         configureBoxPlotButton.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.configureBoxPlotButton.text")); // NOI18N
         configureBoxPlotButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 configureBoxPlotButtonActionPerformed(evt);
             }
@@ -181,6 +189,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         configureScatterPlotButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/chart-up.png"))); // NOI18N
         configureScatterPlotButton.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.configureScatterPlotButton.text_1")); // NOI18N
         configureScatterPlotButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 configureScatterPlotButtonActionPerformed(evt);
             }
@@ -189,6 +198,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         showReportButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/application-block.png"))); // NOI18N
         showReportButton.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.showReportButton.text")); // NOI18N
         showReportButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 showReportButtonActionPerformed(evt);
             }
@@ -196,6 +206,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
 
         useLinesCheckBox.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.useLinesCheckBox.text")); // NOI18N
         useLinesCheckBox.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 useLinesCheckBoxActionPerformed(evt);
             }
@@ -203,6 +214,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
 
         useLinearRegression.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.useLinearRegression.text")); // NOI18N
         useLinearRegression.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 useLinearRegressionActionPerformed(evt);
             }
@@ -211,6 +223,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         configureHistogramButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/chart.png"))); // NOI18N
         configureHistogramButton.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.configureHistogramButton.text")); // NOI18N
         configureHistogramButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 configureHistogramButtonActionPerformed(evt);
             }
@@ -219,6 +232,7 @@ public class GeneralNumberListStatisticsReportUI extends javax.swing.JPanel impl
         divisionsLabel.setText(org.openide.util.NbBundle.getMessage(GeneralNumberListStatisticsReportUI.class, "GeneralNumberListStatisticsReportUI.divisionsLabel.text")); // NOI18N
 
         divisionsComboBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 divisionsComboBoxItemStateChanged(evt);
             }

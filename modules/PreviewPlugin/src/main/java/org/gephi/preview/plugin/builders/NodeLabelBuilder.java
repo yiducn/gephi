@@ -44,8 +44,7 @@ package org.gephi.preview.plugin.builders;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphView;
 import org.gephi.graph.api.Node;
@@ -65,27 +64,18 @@ import org.openide.util.lookup.ServiceProvider;
 public class NodeLabelBuilder implements ItemBuilder {
 
     @Override
-    public Item[] getItems(Graph graph, AttributeModel attributeModel) {
-
-        boolean useTextData = false;
-        for (Node n : graph.getNodes()) {
-            TextProperties textData = n.getTextProperties();
-            if (textData != null && textData.getText() != null && !textData.getText().isEmpty()) {
-                useTextData = true;
-            }
-        }
-
+    public Item[] getItems(Graph graph) {
         //Build text
         VisualizationController vizController = Lookup.getDefault().lookup(VisualizationController.class);
         Column[] nodeColumns = vizController != null ? vizController.getNodeTextColumns() : null;
 
-        List<Item> items = new ArrayList<Item>();
+        List<Item> items = new ArrayList<>();
         for (Node n : graph.getNodes()) {
             NodeLabelItem labelItem = new NodeLabelItem(n);
             String label = getLabel(n, nodeColumns, graph.getView());
             labelItem.setData(NodeLabelItem.LABEL, label);
             TextProperties textData = n.getTextProperties();
-            if (textData != null && useTextData) {
+            if (textData != null) {
                 if (textData.getR() != -1) {
                     labelItem.setData(NodeLabelItem.COLOR, new Color((int) (textData.getR() * 255),
                             (int) (textData.getG() * 255),
@@ -96,7 +86,7 @@ public class NodeLabelBuilder implements ItemBuilder {
 //                labelItem.setData(NodeLabelItem.HEIGHT, textData.getHeight());
                 labelItem.setData(NodeLabelItem.SIZE, textData.getSize());
                 labelItem.setData(NodeLabelItem.VISIBLE, textData.isVisible());
-                labelItem.setData(NodeLabelItem.LABEL, textData.getText());
+                labelItem.setData(NodeLabelItem.LABEL, label);
                 if (textData.isVisible() && label != null && !label.isEmpty()) {
                     items.add(labelItem);
                 }

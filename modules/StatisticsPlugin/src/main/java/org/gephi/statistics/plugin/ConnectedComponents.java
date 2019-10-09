@@ -46,9 +46,7 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
-import org.gephi.attribute.api.Table;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.EdgeIterable;
@@ -57,6 +55,7 @@ import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
 import org.gephi.graph.api.NodeIterable;
+import org.gephi.graph.api.Table;
 import org.gephi.graph.api.UndirectedGraph;
 import org.gephi.statistics.spi.Statistics;
 import org.gephi.utils.longtask.spi.LongTask;
@@ -93,31 +92,31 @@ public class ConnectedComponents implements Statistics, LongTask {
     }
 
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
-        isDirected = graphModel.isDirected();
+    public void execute(GraphModel graphModel) {
         isCanceled = false;
 
         UndirectedGraph undirectedGraph = graphModel.getUndirectedGraphVisible();
 
         undirectedGraph.readLock();
-
-        weaklyConnected(undirectedGraph, attributeModel);
-        if (isDirected) {
-            DirectedGraph directedGraph = graphModel.getDirectedGraphVisible();
-            stronglyConnected(directedGraph, attributeModel);
+        try {
+            weaklyConnected(undirectedGraph);
+            if (isDirected) {
+                DirectedGraph directedGraph = graphModel.getDirectedGraphVisible();
+                stronglyConnected(directedGraph, graphModel);
+            }
+        } finally {
+            undirectedGraph.readUnlock();
         }
-
-        undirectedGraph.readUnlock();
     }
 
-    public void weaklyConnected(UndirectedGraph graph, AttributeModel attributeModel) {
+    public void weaklyConnected(UndirectedGraph graph) {
         isCanceled = false;
 
-        Column componentCol = initializeWeeklyConnectedColumn(attributeModel);
+        Column componentCol = initializeWeaklyConnectedColumn(graph.getModel());
 
-        HashMap<Node, Integer> indicies = createIndiciesMap(graph);
+        HashMap<Node, Integer> indices = createIndicesMap(graph);
 
-        LinkedList<LinkedList<Node>> components = computeWeeklyConnectedComponents(graph, indicies);
+        LinkedList<LinkedList<Node>> components = computeWeaklyConnectedComponents(graph, indices);
 
         saveComputedComponents(components, componentCol);
 
@@ -126,8 +125,7 @@ public class ConnectedComponents implements Statistics, LongTask {
         componentCount = components.size();
     }
 
-    public LinkedList<LinkedList<Node>> computeWeeklyConnectedComponents(Graph graph, HashMap<Node, Integer> indicies) {
-
+    public LinkedList<LinkedList<Node>> computeWeaklyConnectedComponents(Graph graph, HashMap<Node, Integer> indices) {
         int N = graph.getNodeCount();
 
         //Keep track of which nodes have been seen
@@ -137,18 +135,18 @@ public class ConnectedComponents implements Statistics, LongTask {
 
         int seenCount = 0;
 
-        LinkedList<LinkedList<Node>> components = new LinkedList<LinkedList<Node>>();
+        LinkedList<LinkedList<Node>> components = new LinkedList<>();
         while (seenCount < N) {
             //The search Q
-            LinkedList<Node> Q = new LinkedList<Node>();
+            LinkedList<Node> Q = new LinkedList<>();
             //The component-list
-            LinkedList<Node> component = new LinkedList<Node>();
+            LinkedList<Node> component = new LinkedList<>();
 
-            //Seed the seach Q
+            //Seed the search Q
             NodeIterable iter = graph.getNodes();
-            for (Node first : iter) {
-                if (color[indicies.get(first)] == 0) {
-                    Q.add(first);
+            for (Node next : iter) {
+                if (color[indices.get(next)] == 0) {
+                    Q.add(next);
                     iter.doBreak();
                     break;
                 }
@@ -156,13 +154,15 @@ public class ConnectedComponents implements Statistics, LongTask {
 
             //While there are more nodes to search
             while (!Q.isEmpty()) {
+                
                 if (isCanceled) {
-                    graph.readUnlock();
-                    return new LinkedList<LinkedList<Node>>();
+                    return new LinkedList<>();
                 }
                 //Get the next Node and add it to the component list
                 Node u = Q.removeFirst();
                 component.add(u);
+                
+                color[indices.get(u)] = 2;
 
                 //Iterate over all of u's neighbors
                 EdgeIterable edgeIter = graph.getEdges(u);
@@ -170,42 +170,43 @@ public class ConnectedComponents implements Statistics, LongTask {
                 //For each neighbor
                 for (Edge edge : edgeIter) {
                     Node reachable = graph.getOpposite(u, edge);
-                    int id = indicies.get(reachable);
+                    int id = indices.get(reachable);
                     //If this neighbor is unvisited
                     if (color[id] == 0) {
+                        //Mark it as used 
                         color[id] = 1;
                         //Add it to the search Q
                         Q.addLast(reachable);
-                        //Mark it as used 
-
-                        Progress.progress(progress, seenCount);
                     }
                 }
-                color[indicies.get(u)] = 2;
+                
                 seenCount++;
+                Progress.progress(progress, seenCount);
             }
+            
             components.add(component);
         }
+        
         return components;
     }
 
-    private Column initializeWeeklyConnectedColumn(AttributeModel attributeModel) {
-        Table nodeTable = attributeModel.getNodeTable();
+    private Column initializeWeaklyConnectedColumn(GraphModel graphModel) {
+        Table nodeTable = graphModel.getNodeTable();
         Column componentCol = nodeTable.getColumn(WEAKLY);
         if (componentCol == null) {
-            componentCol = nodeTable.addColumn(WEAKLY, "Component ID", Integer.class, new Integer(0));
+            componentCol = nodeTable.addColumn(WEAKLY, "Component ID", Integer.class, 0);
         }
         return componentCol;
     }
 
-    public HashMap<Node, Integer> createIndiciesMap(Graph hgraph) {
-        HashMap<Node, Integer> indicies = new HashMap<Node, Integer>();
+    public HashMap<Node, Integer> createIndicesMap(Graph graph) {
+        HashMap<Node, Integer> indices = new HashMap<>();
         int index = 0;
-        for (Node s : hgraph.getNodes()) {
-            indicies.put(s, index);
+        for (Node s : graph.getNodes()) {
+            indices.put(s, index);
             index++;
         }
-        return indicies;
+        return indices;
     }
 
     private void saveComputedComponents(LinkedList<LinkedList<Node>> components, Column componentCol) {
@@ -225,33 +226,33 @@ public class ConnectedComponents implements Statistics, LongTask {
         }
     }
 
-    private Column initializeStronglyConnectedColumn(AttributeModel attributeModel) {
-        Table nodeTable = attributeModel.getNodeTable();
+    private Column initializeStronglyConnectedColumn(GraphModel graphModel) {
+        Table nodeTable = graphModel.getNodeTable();
         Column componentCol = nodeTable.getColumn(STRONG);
         if (componentCol == null) {
-            componentCol = nodeTable.addColumn(STRONG, "Strongly-Connected ID", Integer.class, new Integer(0));
+            componentCol = nodeTable.addColumn(STRONG, "Strongly-Connected ID", Integer.class, 0);
         }
         return componentCol;
     }
 
-    public void stronglyConnected(DirectedGraph hgraph, AttributeModel attributeModel) {
+    public void stronglyConnected(DirectedGraph graph, GraphModel graphModel) {
         count = 1;
         stronglyCount = 0;
 
-        Column componentCol = initializeStronglyConnectedColumn(attributeModel);
+        Column componentCol = initializeStronglyConnectedColumn(graphModel);
 
-        HashMap<Node, Integer> indicies = createIndiciesMap(hgraph);
+        HashMap<Node, Integer> indices = createIndicesMap(graph);
 
-        LinkedList<LinkedList<Node>> components = top_tarjans(hgraph, indicies);
+        LinkedList<LinkedList<Node>> components = top_tarjans(graph, indices);
 
         saveComputedComponents(components, componentCol);
 
         stronglyCount = components.size();
     }
 
-    public LinkedList<LinkedList<Node>> top_tarjans(DirectedGraph graph, HashMap<Node, Integer> indicies) {
+    public LinkedList<LinkedList<Node>> top_tarjans(DirectedGraph graph, HashMap<Node, Integer> indices) {
 
-        LinkedList<LinkedList<Node>> allComponents = new LinkedList<LinkedList<Node>>();
+        LinkedList<LinkedList<Node>> allComponents = new LinkedList<>();
 
         count = 1;
         stronglyCount = 0;
@@ -262,14 +263,14 @@ public class ConnectedComponents implements Statistics, LongTask {
 
         while (true) {
             //The search Q
-            LinkedList<Node> S = new LinkedList<Node>();
+            LinkedList<Node> S = new LinkedList<>();
             //The component-list
             //LinkedList<Node> component = new LinkedList<Node>();
             //Seed the seach Q
             Node first = null;
             NodeIterable iter = graph.getNodes();
             for (Node u : iter) {
-                if (index[indicies.get(u)] == 0) {
+                if (index[indices.get(u)] == 0) {
                     first = u;
                     iter.doBreak();
                     break;
@@ -279,16 +280,16 @@ public class ConnectedComponents implements Statistics, LongTask {
                 return allComponents;
             }
 
-            LinkedList<LinkedList<Node>> components = new LinkedList<LinkedList<Node>>();
-            components = tarjans(components, S, graph, first, index, low_index, indicies);
+            LinkedList<LinkedList<Node>> components = new LinkedList<>();
+            components = tarjans(components, S, graph, first, index, low_index, indices);
             for (LinkedList<Node> component : components) {
                 allComponents.add(component);
             }
         }
     }
 
-    private LinkedList<LinkedList<Node>> tarjans(LinkedList<LinkedList<Node>> components, LinkedList<Node> S, DirectedGraph graph, Node f, int[] index, int[] low_index, HashMap<Node, Integer> indicies) {
-        int id = indicies.get(f);
+    private LinkedList<LinkedList<Node>> tarjans(LinkedList<LinkedList<Node>> components, LinkedList<Node> S, DirectedGraph graph, Node f, int[] index, int[] low_index, HashMap<Node, Integer> indices) {
+        int id = indices.get(f);
         index[id] = count;
         low_index[id] = count;
         count++;
@@ -296,15 +297,15 @@ public class ConnectedComponents implements Statistics, LongTask {
         EdgeIterable edgeIter = graph.getOutEdges(f);
         for (Edge e : edgeIter) {
             Node u = graph.getOpposite(f, e);
-            int x = indicies.get(u);
+            int x = indices.get(u);
             if (index[x] == 0) {
-                tarjans(components, S, graph, u, index, low_index, indicies);
+                tarjans(components, S, graph, u, index, low_index, indices);
                 low_index[id] = Math.min(low_index[x], low_index[id]);
             } else if (S.contains(u)) {
                 low_index[id] = Math.min(low_index[id], index[x]);
             }
         }
-        LinkedList<Node> currentComponent = new LinkedList<Node>();
+        LinkedList<Node> currentComponent = new LinkedList<>();
         if (low_index[id] == index[id]) {
             Node v = null;
             while (v != f) {
@@ -328,10 +329,16 @@ public class ConnectedComponents implements Statistics, LongTask {
         return isDirected;
     }
 
+    /**
+     * @return an unordered array of component sizes
+     */
     public int[] getComponentsSize() {
         return componentsSize;
     }
 
+    /**
+     * @return the index of the largest component in the array returned by getComponentSize()
+     */
     public int getGiantComponent() {
         int[] sizes = getComponentsSize();
         int max = Integer.MIN_VALUE;
@@ -360,7 +367,7 @@ public class ConnectedComponents implements Statistics, LongTask {
 
     @Override
     public String getReport() {
-        Map<Integer, Integer> sizeDist = new HashMap<Integer, Integer>();
+        Map<Integer, Integer> sizeDist = new HashMap<>();
         for (int v : componentsSize) {
             if (!sizeDist.containsKey(v)) {
                 sizeDist.put(v, 0);
@@ -397,7 +404,7 @@ public class ConnectedComponents implements Statistics, LongTask {
                 + "Network Interpretation:  " + (isDirected ? "directed" : "undirected") + "<br>"
                 + "<br> <h2> Results: </h2>"
                 + "Number of Weakly Connected Components: " + componentCount + "<br>"
-                + (isDirected ? "Number of Stronlgy Connected Components: " + stronglyCount + "<br>" : "")
+                + (isDirected ? "Number of Strongly Connected Components: " + stronglyCount + "<br>" : "")
                 + "<br /><br />" + imageFile
                 + "<br />" + "<h2> Algorithm: </h2>"
                 + "Robert Tarjan, <i>Depth-First Search and Linear Graph Algorithms</i>, in SIAM Journal on Computing 1 (2): 146–160 (1972)<br />"

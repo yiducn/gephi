@@ -117,10 +117,7 @@ public class EdgeDraftImpl extends ElementDraftImpl implements EdgeDraft {
 
     @Override
     public boolean isSelfLoop() {
-        if (source != null && source == target) {
-            return true;
-        }
-        return false;
+        return source != null && source == target;
     }
 
     @Override
@@ -140,5 +137,33 @@ public class EdgeDraftImpl extends ElementDraftImpl implements EdgeDraft {
     @Override
     ColumnDraft getColumn(String key) {
         return container.getEdgeColumn(key);
+    }
+
+    @Override
+    public Iterable<ColumnDraft> getColumns() {
+        return container.getEdgeColumns();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(source.getId());
+        sb.append(" -> ");
+        sb.append(target.getId());
+
+        sb.append(" (id = ");
+        sb.append(id);
+
+        if (type != null && !type.toString().isEmpty()) {
+            sb.append("; type = ");
+            sb.append(type);
+        }
+        sb.append(")");
+
+        if (direction != null) {
+            sb.append(" direction = " + direction.name());
+        }
+
+        return sb.toString();
     }
 }

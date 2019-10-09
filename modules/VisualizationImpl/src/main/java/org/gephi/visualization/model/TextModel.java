@@ -4,7 +4,6 @@
  */
 package org.gephi.visualization.model;
 
-import java.awt.geom.Rectangle2D;
 import org.gephi.graph.api.ElementProperties;
 
 /**
@@ -20,8 +19,6 @@ public interface TextModel {
     public float getTextWidth();
 
     public float getTextHeight();
-
-    public void setTextBounds(Rectangle2D bounds);
 
     public String getText();
 

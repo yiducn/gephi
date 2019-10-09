@@ -45,12 +45,12 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Table;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.NodeIterable;
+import org.gephi.graph.api.Table;
 import org.gephi.statistics.spi.Statistics;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
@@ -98,25 +98,27 @@ public class Degree implements Statistics, LongTask {
      * @param graphModel
      */
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
+    public void execute(GraphModel graphModel) {
         Graph graph = graphModel.getGraphVisible();
-        execute(graph, attributeModel);
+        execute(graph);
     }
 
-    public void execute(Graph graph, AttributeModel attributeModel) {
+    public void execute(Graph graph) {
         isDirected = graph.isDirected();
         isCanceled = false;
 
         initializeDegreeDists();
-        initializeAttributeColunms(attributeModel);
+        initializeAttributeColunms(graph.getModel());
 
         graph.readLock();
 
-        avgDegree = calculateAverageDegree(graph, isDirected, true);
+        try {
+            avgDegree = calculateAverageDegree(graph, isDirected, true);
 
-        graph.setAttribute(AVERAGE_DEGREE, avgDegree);
-
-        graph.readUnlockAll();
+            graph.setAttribute(AVERAGE_DEGREE, avgDegree);
+        } finally {
+            graph.readUnlockAll();
+        }
     }
 
     protected int calculateInDegree(DirectedGraph directedGraph, Node n) {
@@ -142,7 +144,8 @@ public class Degree implements Statistics, LongTask {
 
         Progress.start(progress, graph.getNodeCount());
 
-        for (Node n : graph.getNodes()) {
+        NodeIterable nodesIterable = graph.getNodes();
+        for (Node n : nodesIterable) {
             int inDegree = 0;
             int outDegree = 0;
             int degree = 0;
@@ -167,18 +170,19 @@ public class Degree implements Statistics, LongTask {
             averageDegree += degree;
 
             if (isCanceled) {
+                nodesIterable.doBreak();
                 break;
             }
             Progress.progress(progress);
         }
 
-        averageDegree /= graph.getNodeCount();
+        averageDegree /= (isDirected ? 2.0 : 1.0) * graph.getNodeCount();
 
         return averageDegree;
     }
 
-    private void initializeAttributeColunms(AttributeModel attributeModel) {
-        Table nodeTable = attributeModel.getNodeTable();
+    private void initializeAttributeColunms(GraphModel graphModel) {
+        Table nodeTable = graphModel.getNodeTable();
         if (isDirected) {
             if (!nodeTable.hasColumn(INDEGREE)) {
                 nodeTable.addColumn(INDEGREE, NbBundle.getMessage(Degree.class, "Degree.nodecolumn.InDegree"), Integer.class, 0);
@@ -193,9 +197,9 @@ public class Degree implements Statistics, LongTask {
     }
 
     private void initializeDegreeDists() {
-        inDegreeDist = new HashMap<Integer, Integer>();
-        outDegreeDist = new HashMap<Integer, Integer>();
-        degreeDist = new HashMap<Integer, Integer>();
+        inDegreeDist = new HashMap<>();
+        outDegreeDist = new HashMap<>();
+        degreeDist = new HashMap<>();
     }
 
     private void updateDegreeDists(int inDegree, int outDegree, int degree) {

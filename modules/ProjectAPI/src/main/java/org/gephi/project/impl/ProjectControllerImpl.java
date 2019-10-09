@@ -70,16 +70,16 @@ public class ProjectControllerImpl implements ProjectController {
     private enum EventType {
 
         INITIALIZE, SELECT, UNSELECT, CLOSE, DISABLE
-    };
+    }
+
     //Data
     private final ProjectsImpl projects = new ProjectsImpl();
     private final List<WorkspaceListener> listeners;
-    private WorkspaceImpl temporaryOpeningWorkspace;
 
     public ProjectControllerImpl() {
 
         //Listeners
-        listeners = new ArrayList<WorkspaceListener>();
+        listeners = new ArrayList<>();
         listeners.addAll(Lookup.getDefault().lookupAll(WorkspaceListener.class));
 
         registerNetbeansPropertyEditors();
@@ -91,7 +91,7 @@ public class ProjectControllerImpl implements ProjectController {
      * read project files.
      */
     private void registerNetbeansPropertyEditors() {
-        List<String> list = new ArrayList<String>(Arrays.asList(PropertyEditorManager.getEditorSearchPath()));
+        List<String> list = new ArrayList<>(Arrays.asList(PropertyEditorManager.getEditorSearchPath()));
         if (!list.contains("org.netbeans.beaninfo.editors")) {
             list.add(0, "org.netbeans.beaninfo.editors");//Add first for more preference
             PropertyEditorManager.setEditorSearchPath(list.toArray(new String[list.size()]));
@@ -158,6 +158,9 @@ public class ProjectControllerImpl implements ProjectController {
             projects.closeCurrentProject();
 
             fireWorkspaceEvent(EventType.DISABLE, null);
+
+            //Remove
+            projects.removeProject(currentProject);
         }
     }
 
@@ -221,6 +224,10 @@ public class ProjectControllerImpl implements ProjectController {
         projects.setCurrentProject(projectImpl);
         projectInformationImpl.open();
 
+        for (Workspace ws : project.getLookup().lookup(WorkspaceProviderImpl.class).getWorkspaces()) {
+            fireWorkspaceEvent(EventType.INITIALIZE, ws);
+        }
+
         if (!workspaceProviderImpl.hasCurrentWorkspace()) {
             if (workspaceProviderImpl.getWorkspaces().length == 0) {
                 Workspace workspace = newWorkspace(project);
@@ -242,10 +249,7 @@ public class ProjectControllerImpl implements ProjectController {
     @Override
     public WorkspaceImpl getCurrentWorkspace() {
         if (projects.hasCurrentProject()) {
-            temporaryOpeningWorkspace = null;
             return getCurrentProject().getLookup().lookup(WorkspaceProviderImpl.class).getCurrentWorkspace();
-        } else if (temporaryOpeningWorkspace != null) {
-            return temporaryOpeningWorkspace;
         }
         return null;
     }
@@ -269,10 +273,6 @@ public class ProjectControllerImpl implements ProjectController {
 
         //Event
         fireWorkspaceEvent(EventType.SELECT, workspace);
-    }
-
-    @Override
-    public void cleanWorkspace(Workspace workspace) {
     }
 
     @Override
@@ -301,19 +301,6 @@ public class ProjectControllerImpl implements ProjectController {
     @Override
     public void setSource(Workspace workspace, String source) {
         workspace.getLookup().lookup(WorkspaceInformationImpl.class).setSource(source);
-    }
-
-    /**
-     * Hack to have a current workpace when opening workspace
-     *
-     * @param temporaryOpeningWorkspace the opening workspace or null
-     */
-    public void setTemporaryOpeningWorkspace(WorkspaceImpl temporaryOpeningWorkspace) {
-        this.temporaryOpeningWorkspace = temporaryOpeningWorkspace;
-        if (temporaryOpeningWorkspace != null) {
-            //Init controllers with empty models
-            fireWorkspaceEvent(EventType.INITIALIZE, temporaryOpeningWorkspace);
-        }
     }
 
     @Override

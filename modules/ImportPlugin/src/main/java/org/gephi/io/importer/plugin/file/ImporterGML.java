@@ -73,6 +73,11 @@ public class ImporterGML implements FileImporter, LongTask {
             importData(lineReader);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            try {
+                lineReader.close();
+            } catch (IOException ex) {
+            }
         }
         return !cancel;
     }
@@ -98,7 +103,7 @@ public class ImporterGML implements FileImporter, LongTask {
 
     private ArrayList<Object> parseList(LineNumberReader reader) throws IOException {
 
-        ArrayList<Object> list = new ArrayList<Object>();
+        ArrayList<Object> list = new ArrayList<>();
         char t;
         boolean readString = false;
         String stringBuffer = new String();
@@ -127,11 +132,17 @@ public class ImporterGML implements FileImporter, LongTask {
                     case '\t':
                     case '\n':
                         if (!stringBuffer.isEmpty()) {
+                            //First try to parse as long, if not possible, try double.
                             try {
-                                Double doubleValue = Double.valueOf(stringBuffer);
-                                list.add(doubleValue);
-                            } catch (NumberFormatException e) {
-                                list.add(stringBuffer);
+                                Long longValue = Long.valueOf(stringBuffer);
+                                list.add(longValue);
+                            } catch (NumberFormatException e1) {
+                                try {
+                                    Double doubleValue = Double.valueOf(stringBuffer);
+                                    list.add(doubleValue);
+                                } catch (NumberFormatException e2) {
+                                    list.add(stringBuffer);
+                                }
                             }
                             stringBuffer = new String();
                         }
@@ -160,8 +171,8 @@ public class ImporterGML implements FileImporter, LongTask {
             } else if ("edge".equals(key)) {
                 ret = parseEdge((ArrayList) value);
             } else if ("directed".equals(key)) {
-                if (value instanceof Double) {
-                    EdgeDirectionDefault edgeDefault = ((Double) value) == 1 ? EdgeDirectionDefault.DIRECTED : EdgeDirectionDefault.UNDIRECTED;
+                if (value instanceof Number) {
+                    EdgeDirectionDefault edgeDefault = ((Number) value).intValue() == 1 ? EdgeDirectionDefault.DIRECTED : EdgeDirectionDefault.UNDIRECTED;
                     container.setEdgeDefault(edgeDefault);
                 } else {
                     report.logIssue(new Issue(NbBundle.getMessage(ImporterGML.class, "importerGML_error_directedgraphparse"), Issue.Level.WARNING));
@@ -222,37 +233,45 @@ public class ImporterGML implements FileImporter, LongTask {
                 if (!ret) {
                     break;
                 }
-            } else if ("x".equalsIgnoreCase(key) && value instanceof Double) {
-                node.setX(((Double) value).floatValue());
-            } else if ("y".equalsIgnoreCase(key) && value instanceof Double) {
-                node.setY(((Double) value).floatValue());
-            } else if ("z".equalsIgnoreCase(key) && value instanceof Double) {
-                node.setZ(((Double) value).floatValue());
-            } else if ("w".equalsIgnoreCase(key) && value instanceof Double) {
-                node.setSize(((Double) value).floatValue());
+            } else if ("x".equalsIgnoreCase(key) && value instanceof Number) {
+                node.setX(((Number) value).floatValue());
+            } else if ("y".equalsIgnoreCase(key) && value instanceof Number) {
+                node.setY(((Number) value).floatValue());
+            } else if ("z".equalsIgnoreCase(key) && value instanceof Number) {
+                node.setZ(((Number) value).floatValue());
+            } else if ("w".equalsIgnoreCase(key) && value instanceof Number) {
+                node.setSize(((Number) value).floatValue());
             } else if ("h".equalsIgnoreCase(key)) {
             } else if ("d".equalsIgnoreCase(key)) {
             } else if ("fill".equalsIgnoreCase(key)) {
-                int colorHex = -1;
                 if (value instanceof String) {
-                    String str = ((String) value).trim().replace("#", "");
-                    try {
-                        colorHex = Integer.valueOf(str, 16).intValue();
-                    } catch (Exception e) {
-                    }
-                }
-                if (colorHex != -1) {
-                    node.setColor(new Color(colorHex));
+                    node.setColor((String) value);
+                } else if (value instanceof Number) {
+                    node.setColor(new Color(((Number) value).intValue()));
                 }
             } else {
-                node.setValue(key, value.toString());
+                node.setValue(key, value);
             }
         }
         return ret;
     }
 
     private boolean parseEdge(ArrayList list) {
-        EdgeDraft edgeDraft = container.factory().newEdgeDraft();
+        String id = null;
+        for (int i = 0; i < list.size(); i += 2) {
+            String key = (String) list.get(i);
+            Object value = list.get(i + 1);
+            if ("id".equalsIgnoreCase(key)) {
+                id = value.toString();
+            }
+        }
+        EdgeDraft edgeDraft;
+        if (id != null) {
+            edgeDraft = container.factory().newEdgeDraft(id);
+        } else {
+            edgeDraft = container.factory().newEdgeDraft();
+        }
+
         for (int i = 0; i < list.size(); i += 2) {
             String key = (String) list.get(i);
             Object value = list.get(i + 1);
@@ -263,8 +282,8 @@ public class ImporterGML implements FileImporter, LongTask {
                 NodeDraft target = container.getNode(value.toString());
                 edgeDraft.setTarget(target);
             } else if ("value".equals(key) || "weight".equals(key)) {
-                if (value instanceof Double) {
-                    edgeDraft.setWeight(((Double) value).floatValue());
+                if (value instanceof Number) {
+                    edgeDraft.setWeight(((Number) value).doubleValue());
                 }
             } else if ("label".equals(key)) {
                 edgeDraft.setLabel(value.toString());
@@ -280,7 +299,7 @@ public class ImporterGML implements FileImporter, LongTask {
         for (int i = 0; i < list.size(); i += 2) {
             String key = (String) list.get(i);
             Object value = list.get(i + 1);
-            if ("source".equalsIgnoreCase(key) || "target".equalsIgnoreCase(key) || "value".equalsIgnoreCase(key) || "weight".equalsIgnoreCase(key) || "label".equalsIgnoreCase(key)) {
+            if ("id".equalsIgnoreCase(key) || "source".equalsIgnoreCase(key) || "target".equalsIgnoreCase(key) || "value".equalsIgnoreCase(key) || "weight".equalsIgnoreCase(key) || "label".equalsIgnoreCase(key)) {
                 continue; // already parsed
             }
             if (value instanceof ArrayList) {
@@ -290,14 +309,20 @@ public class ImporterGML implements FileImporter, LongTask {
                     break;
                 }
             } else if ("directed".equalsIgnoreCase(key)) {
-                if (value instanceof Double) {
-                    EdgeDirection type = ((Double) value) == 1 ? EdgeDirection.DIRECTED : EdgeDirection.UNDIRECTED;
-                    edge.setType(type);
+                if (value instanceof Number) {
+                    EdgeDirection type = ((Number) value).intValue() == 1 ? EdgeDirection.DIRECTED : EdgeDirection.UNDIRECTED;
+                    edge.setDirection(type);
                 } else {
                     report.logIssue(new Issue(NbBundle.getMessage(ImporterGML.class, "importerGML_error_directedparse", edge.toString()), Issue.Level.WARNING));
                 }
+            } else if ("fill".equalsIgnoreCase(key)) {
+                if (value instanceof String) {
+                    edge.setColor((String) value);
+                } else if (value instanceof Number) {
+                    edge.setColor(new Color(((Number) value).intValue()));
+                }
             } else {
-                edge.setValue(key, value.toString());
+                edge.setValue(key, value);
             }
         }
         return ret;

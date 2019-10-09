@@ -48,11 +48,11 @@ import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.datalab.plugin.manipulators.columns.merge.CreateTimeInterval;
 import org.gephi.datalab.spi.DialogControls;
 import org.gephi.datalab.spi.Manipulator;
 import org.gephi.datalab.spi.ManipulatorUI;
+import org.gephi.graph.api.Column;
 import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Validator;
 import org.netbeans.validation.api.ui.ValidationGroup;
@@ -63,7 +63,7 @@ import org.openide.util.NbPreferences;
 /**
  * UI for CreateTimeInterval
  *
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class CreateTimeIntervalUI extends javax.swing.JPanel implements ManipulatorUI {
 
@@ -84,6 +84,9 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
      */
     public CreateTimeIntervalUI() {
         initComponents();
+        
+        defaultStartDatePicker.setFormats("yyyy-MM-dd");
+        defaultEndDatePicker.setFormats("yyyy-MM-dd");
 
         //Add some common date formats to choose:
         dateFormatComboBox.addItem("yyyy-MM-dd");
@@ -97,7 +100,7 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         dateFormatComboBox.setSelectedIndex(0);
     }
 
-    private AttributeColumn getComboBoxColumn(JComboBox comboBox) {
+    private Column getComboBoxColumn(JComboBox comboBox) {
         return ((ColumnWrapper) comboBox.getSelectedItem()).column;
     }
 
@@ -137,10 +140,11 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         }
     }
 
+    @Override
     public void setup(Manipulator m, DialogControls dialogControls) {
         this.manipulator = (CreateTimeInterval) m;
         this.dialogControls = dialogControls;
-        AttributeColumn[] columns = manipulator.getColumns();
+        Column[] columns = manipulator.getColumns();
         column1 = new ColumnWrapper(columns[0]);
         if (columns.length == 2) {//2 columns were chosen to merge
             column2 = new ColumnWrapper(columns[1]);
@@ -163,6 +167,7 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         refreshOkButton();
     }
 
+    @Override
     public void unSetup() {
         if (dialogControls.isOkButtonEnabled()) {
             boolean parseNumbers = parseNumbersRadioButton.isSelected();
@@ -190,6 +195,7 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         storeSavedParameters();
     }
 
+    @Override
     public String getDisplayName() {
         return manipulator.getName();
     }
@@ -232,11 +238,13 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         });
     }
 
+    @Override
     public JPanel getSettingsPanel() {
 
         return validationPanel;
     }
 
+    @Override
     public boolean isModal() {
         return true;
     }
@@ -288,9 +296,9 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
 
     private class ColumnWrapper {
 
-        private AttributeColumn column;
+        private Column column;
 
-        public ColumnWrapper(AttributeColumn column) {
+        public ColumnWrapper(Column column) {
             this.column = column;
         }
 
@@ -329,12 +337,14 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         startColumnLabel.setText(org.openide.util.NbBundle.getMessage(CreateTimeIntervalUI.class, "CreateTimeIntervalUI.startColumnLabel.text")); // NOI18N
 
         startColumnComboBox.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 startColumnComboBoxActionPerformed(evt);
             }
         });
 
         endColumnComboBox.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 endColumnComboBoxActionPerformed(evt);
             }
@@ -346,6 +356,7 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         parseNumbersRadioButton.setSelected(true);
         parseNumbersRadioButton.setText(org.openide.util.NbBundle.getMessage(CreateTimeIntervalUI.class, "CreateTimeIntervalUI.parseNumbersRadioButton.text")); // NOI18N
         parseNumbersRadioButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 parseNumbersRadioButtonActionPerformed(evt);
             }
@@ -357,6 +368,7 @@ public class CreateTimeIntervalUI extends javax.swing.JPanel implements Manipula
         buttonGroup.add(parseDatesRadioButton);
         parseDatesRadioButton.setText(org.openide.util.NbBundle.getMessage(CreateTimeIntervalUI.class, "CreateTimeIntervalUI.parseDatesRadioButton.text")); // NOI18N
         parseDatesRadioButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 parseDatesRadioButtonActionPerformed(evt);
             }

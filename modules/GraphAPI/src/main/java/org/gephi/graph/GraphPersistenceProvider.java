@@ -46,42 +46,51 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.gephi.graph.store.GraphModelImpl;
-import org.gephi.graph.store.Serialization;
+import org.gephi.graph.api.GraphModel;
 import org.gephi.project.api.Workspace;
 import org.gephi.project.spi.WorkspaceBytesPersistenceProvider;
+import org.gephi.project.spi.WorkspacePersistenceProvider;
 import org.openide.util.lookup.ServiceProvider;
 
-/**
- *
- * @author mbastian
- */
-@ServiceProvider(service = WorkspaceBytesPersistenceProvider.class)
+@ServiceProvider(service = WorkspacePersistenceProvider.class, position = 100)
 public class GraphPersistenceProvider implements WorkspaceBytesPersistenceProvider {
 
     @Override
     public void writeBytes(DataOutputStream stream, Workspace workspace) {
-        GraphModelImpl model = workspace.getLookup().lookup(GraphModelImpl.class);
+        GraphModel model = workspace.getLookup().lookup(GraphModel.class);
         if (model != null) {
             try {
-                Serialization serialization = new Serialization(model.getStore());
-                serialization.serializeGraphStore(stream);
+                GraphModel.Serialization.write(stream, model);
             } catch (IOException ex) {
                 Logger.getLogger("").log(Level.SEVERE, "", ex.getCause());
             }
         }
     }
 
+    private static final int GRAPHSTORE_SERIALIZATION_GRAPHMODEL_CONFIG_ID = 205;
+    
     @Override
     public void readBytes(DataInputStream stream, Workspace workspace) {
-        GraphModelImpl model = workspace.getLookup().lookup(GraphModelImpl.class);
+        GraphModel model = workspace.getLookup().lookup(GraphModel.class);
         if (model != null) {
-            try {
-                Serialization serialization = new Serialization(model.getStore());
-                serialization.deserializeGraphStore(stream);
-            } catch (Exception ex) {
-                Logger.getLogger("").log(Level.SEVERE, "", ex.getCause());
+            throw new IllegalStateException("The graphModel wasn't null");
+        }
+        try {
+            //Detect if the serialized graphstore declares its own version:
+            stream.mark(1);
+            int firstFieldType = stream.readUnsignedByte();
+            stream.reset();
+            
+            if (firstFieldType == GRAPHSTORE_SERIALIZATION_GRAPHMODEL_CONFIG_ID) {
+                //Old graphstore, from Gephi 0.9.0
+                model = GraphModel.Serialization.readWithoutVersionHeader(stream, 0.0f /* no version, first was 0.4*/);//Previous to version header existing at all
+            } else {
+                model = GraphModel.Serialization.read(stream);
             }
+
+            workspace.add(model);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
     }
 

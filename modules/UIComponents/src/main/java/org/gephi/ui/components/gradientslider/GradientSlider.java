@@ -53,7 +53,6 @@ import java.awt.event.KeyListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.lang.reflect.Constructor;
-
 import javax.swing.JColorChooser;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
@@ -113,6 +112,7 @@ public class GradientSlider extends MultiThumbSlider {
     }
 
     /** Returns the Color at the specified position.
+     * @return color
      */
     @Override
     public Object getValue(float pos) {
@@ -136,6 +136,7 @@ public class GradientSlider extends MultiThumbSlider {
 
     /** This is identical to <code>getValues()</code>,
      * except the return value is an array of <code>Colors</code>.
+     * @return color array
      */
     public Color[] getColors() {
         Color[] c = new Color[values.length];
@@ -156,6 +157,7 @@ public class GradientSlider extends MultiThumbSlider {
     /** This invokes a <code>ColorPicker</code> dialog to edit
      * the thumb at the selected index.
      *
+     * @return return true if successful
      */
     @Override
     public boolean doDoubleClick(int x, int y) {
@@ -293,6 +295,7 @@ public class GradientSlider extends MultiThumbSlider {
 
     /** This shows a mini ColorPicker panel to let the user
      * change the selected color.
+     * @return true if successful
      */
     @Override
     public boolean doPopup(int x, int y) {

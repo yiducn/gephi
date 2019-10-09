@@ -48,6 +48,7 @@ import org.gephi.graph.api.GraphModel;
 import org.gephi.layout.spi.Layout;
 import org.gephi.layout.spi.LayoutProperty;
 import org.openide.nodes.Node.Property;
+import org.openide.util.Exceptions;
 
 /**
  * Class to build layout scenario that runs for a certain duration. Multiple
@@ -92,7 +93,7 @@ public class AutoLayout {
 
     public AutoLayout(long duration, TimeUnit timeUnit) {
         this.duration = TimeUnit.MILLISECONDS.convert(duration, timeUnit);
-        this.layouts = new ArrayList<LayoutScenario>();
+        this.layouts = new ArrayList<>();
     }
 
     public void addLayout(Layout layout, float ratio) {
@@ -143,7 +144,7 @@ public class AutoLayout {
                         d.getProperty().setValue(val);
                     }
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    Exceptions.printStackTrace(ex);
                 }
             }
         }
@@ -238,7 +239,7 @@ public class AutoLayout {
     public enum Interpolation {
 
         LINEAR, LOG
-    };
+    }
 
     private static abstract class AbstractDynamicProperty implements DynamicProperty {
 
@@ -283,7 +284,7 @@ public class AutoLayout {
                 }
                 return property.getValue();
             } catch (Exception e) {
-                e.printStackTrace();
+                Exceptions.printStackTrace(e);
             }
             return null;
         }
@@ -306,7 +307,7 @@ public class AutoLayout {
 
         @Override
         public Object getValue(float ratio) {
-            while (thresholds[currentIndex] < ratio && currentIndex < thresholds.length) {
+            while (currentIndex < thresholds.length && thresholds[currentIndex] < ratio) {
                 currentIndex++;
             }
             return value[currentIndex];
@@ -332,13 +333,13 @@ public class AutoLayout {
 
         @Override
         public Object getValue(float ratio) {
-            while (thresholds[currentIndex] < ratio && currentIndex < thresholds.length) {
+            while (currentIndex < thresholds.length && thresholds[currentIndex] < ratio) {
                 currentIndex++;
             }
             if (currentIndex > 0) {
                 float r = 1 / (thresholds[currentIndex] - thresholds[currentIndex - 1]);
                 ratio = ((ratio - thresholds[currentIndex - 1]) * r);
-                return new Double(value[currentIndex - 1].doubleValue() + (value[currentIndex].doubleValue() - value[currentIndex - 1].doubleValue()) * ratio);
+                return value[currentIndex - 1].doubleValue() + (value[currentIndex].doubleValue() - value[currentIndex - 1].doubleValue()) * ratio;
             }
             return value[currentIndex];
         }

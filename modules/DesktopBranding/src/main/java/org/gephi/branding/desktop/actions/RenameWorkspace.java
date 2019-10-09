@@ -58,6 +58,7 @@ import org.openide.util.actions.SystemAction;
  */
 public class RenameWorkspace extends SystemAction {
 
+    @Override
     public void actionPerformed(ActionEvent e) {
         String name = "";
         ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
@@ -71,7 +72,12 @@ public class RenameWorkspace extends SystemAction {
 
     @Override
     public boolean isEnabled() {
-        return Lookup.getDefault().lookup(ProjectControllerUI.class).canCleanWorkspace();
+        return Lookup.getDefault().lookup(ProjectControllerUI.class).canRenameWorkspace();
+    }
+    
+    @Override
+    protected String iconResource() {
+        return "org/gephi/branding/desktop/actions/resources/renameWorkspace.png";
     }
 
     @Override

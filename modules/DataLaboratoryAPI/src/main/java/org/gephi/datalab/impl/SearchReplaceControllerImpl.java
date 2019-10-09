@@ -43,29 +43,33 @@ package org.gephi.datalab.impl;
 
 import java.util.Set;
 import java.util.regex.Matcher;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeController;
-import org.gephi.data.attributes.api.AttributeRow;
-import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.datalab.api.AttributeColumnsController;
 import org.gephi.datalab.api.GraphElementsController;
 import org.gephi.datalab.api.SearchReplaceController;
 import org.gephi.datalab.api.SearchReplaceController.SearchResult;
-import org.gephi.graph.api.Attributes;
+import org.gephi.graph.api.AttributeUtils;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.Element;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.Table;
+import org.gephi.graph.api.TimeFormat;
+import org.joda.time.DateTimeZone;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
- * Implementation of the SearchReplaceController interface
- * declared in the Data Laboratory API.
+ * Implementation of the SearchReplaceController interface declared in the Data Laboratory API.
+ *
  * @see SearchReplaceController
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 @ServiceProvider(service = SearchReplaceController.class)
 public class SearchReplaceControllerImpl implements SearchReplaceController {
 
+    @Override
     public SearchResult findNext(SearchOptions searchOptions) {
         int row = 0;
         int column = 0;
@@ -95,37 +99,40 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
         }
     }
 
+    @Override
     public SearchResult findNext(SearchResult result) {
         return findNext(result.getSearchOptions());
     }
 
+    @Override
     public boolean canReplace(SearchResult result) {
-        AttributeController ac = Lookup.getDefault().lookup(AttributeController.class);
-        AttributeTable table;
-        AttributeColumn column;
+        GraphController gc = Lookup.getDefault().lookup(GraphController.class);
+        Table table;
+        Column column;
         if (result.getFoundNode() != null) {
-            table = ac.getModel().getNodeTable();
+            table = gc.getGraphModel().getNodeTable();
             column = table.getColumn(result.getFoundColumnIndex());
         } else {
-            table = ac.getModel().getEdgeTable();
+            table = gc.getGraphModel().getEdgeTable();
             column = table.getColumn(result.getFoundColumnIndex());
         }
         return Lookup.getDefault().lookup(AttributeColumnsController.class).canChangeColumnData(column);
     }
 
+    @Override
     public SearchResult replace(SearchResult result, String replacement) {
         if (result == null) {
             throw new IllegalArgumentException();
         }
         if (!canReplace(result)) {
-            //Data has changed and the replacement can't be done, continue finding.
+            //Data has changed and the replacement can't be done, continue looking.
             return findNext(result);//Go to next search result
         }
-        AttributeController ac = Lookup.getDefault().lookup(AttributeController.class);
+        GraphController gc = Lookup.getDefault().lookup(GraphController.class);
         Object value;
         String str;
-        Attributes attributes;
-        AttributeColumn column;
+        Element attributes;
+        Column column;
 
         if (!result.getSearchOptions().isUseRegexReplaceMode()) {
             replacement = Matcher.quoteReplacement(replacement);//Avoid using groups and other regex aspects in the replacement
@@ -134,14 +141,20 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
         try {
             //Get value to re-match and replace:
             if (result.getFoundNode() != null) {
-                attributes = result.getFoundNode().getNodeData().getAttributes();
-                column = ac.getModel().getNodeTable().getColumn(result.getFoundColumnIndex());
+                attributes = result.getFoundNode();
+                column = gc.getGraphModel().getNodeTable().getColumn(result.getFoundColumnIndex());
             } else {
-                attributes = result.getFoundEdge().getEdgeData().getAttributes();
-                column = ac.getModel().getEdgeTable().getColumn(result.getFoundColumnIndex());
+                attributes = result.getFoundEdge();
+                column = gc.getGraphModel().getEdgeTable().getColumn(result.getFoundColumnIndex());
             }
-            value = attributes.getValue(result.getFoundColumnIndex());
-            str = value != null ? value.toString() : "";
+
+            GraphModel graphModel = column.getTable().getGraph().getModel();
+            TimeFormat timeFormat = graphModel.getTimeFormat();
+            DateTimeZone timeZone = graphModel.getTimeZone();
+
+            value = attributes.getAttribute(column);
+
+            str = value != null ? AttributeUtils.print(value, timeFormat, timeZone) : "";
             StringBuffer sb = new StringBuffer();
 
             //Match and replace the result:
@@ -156,18 +169,19 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
                 Lookup.getDefault().lookup(AttributeColumnsController.class).setAttributeValue(str, attributes, column);
                 return findNext(result);//Go to next search result
             } else {
-                //Data has changed and the replacement can't be done, continue finding.
+                //Data has changed and the replacement can't be done, continue looking.
                 return findNext(result);//Go to next search result
             }
         } catch (Exception ex) {
             if (ex instanceof IndexOutOfBoundsException) {
                 throw new IndexOutOfBoundsException();//Rethrow the exception when it is caused by a bad regex replacement
             }
-            //Data has changed (a lot of different errors can happen) and the replacement can't be done, continue finding.
+            //Data has changed (a lot of different errors can happen) and the replacement can't be done, continue looking.
             return findNext(result);//Go to next search result
         }
     }
 
+    @Override
     public int replaceAll(SearchOptions searchOptions, String replacement) {
         int replacementsCount = 0;
         searchOptions.resetStatus();
@@ -191,18 +205,25 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
         SearchResult result = null;
         Set<Integer> columnsToSearch = searchOptions.getColumnsToSearch();
         boolean searchAllColumns = columnsToSearch.isEmpty();
+        Table table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getNodeTable();
         Node[] nodes = searchOptions.getNodesToSearch();
-        AttributeRow row;
+        Node row;
+        Column column;
         Object value;
+
+        TimeFormat timeFormat = table.getGraph().getModel().getTimeFormat();
+        DateTimeZone timeZone = table.getGraph().getModel().getTimeZone();
+
         for (; rowIndex < nodes.length; rowIndex++) {
             if (!gec.isNodeInGraph(nodes[rowIndex])) {
                 continue;//Make sure node is still in graph when continuing a search
             }
-            row = (AttributeRow) nodes[rowIndex].getNodeData().getAttributes();
-            for (; columnIndex < row.countValues(); columnIndex++) {
+            row = nodes[rowIndex];
+            for (; columnIndex < table.countColumns(); columnIndex++) {
                 if (searchAllColumns || columnsToSearch.contains(columnIndex)) {
-                    value = row.getValue(columnIndex);
-                    result = matchRegex(value, searchOptions, rowIndex, columnIndex);
+                    column = table.getColumn(columnIndex);
+                    value = row.getAttribute(column);
+                    result = matchRegex(value, searchOptions, rowIndex, columnIndex, timeFormat, timeZone);
                     if (result != null) {
                         result.setFoundNode(nodes[rowIndex]);
                         return result;
@@ -221,18 +242,25 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
         SearchResult result = null;
         Set<Integer> columnsToSearch = searchOptions.getColumnsToSearch();
         boolean searchAllColumns = columnsToSearch.isEmpty();
+        Table table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getEdgeTable();
         Edge[] edges = searchOptions.getEdgesToSearch();
-        AttributeRow row;
+        Edge row;
+        Column column;
         Object value;
+
+        TimeFormat timeFormat = table.getGraph().getModel().getTimeFormat();
+        DateTimeZone timeZone = table.getGraph().getModel().getTimeZone();
+
         for (; rowIndex < edges.length; rowIndex++) {
             if (!gec.isEdgeInGraph(edges[rowIndex])) {
                 continue;//Make sure edge is still in graph when continuing a search
             }
-            row = (AttributeRow) edges[rowIndex].getEdgeData().getAttributes();
-            for (; columnIndex < row.countValues(); columnIndex++) {
+            row = edges[rowIndex];
+            for (; columnIndex < table.countColumns(); columnIndex++) {
                 if (searchAllColumns || columnsToSearch.contains(columnIndex)) {
-                    value = row.getValue(columnIndex);
-                    result = matchRegex(value, searchOptions, rowIndex, columnIndex);
+                    column = table.getColumn(columnIndex);
+                    value = row.getAttribute(column);
+                    result = matchRegex(value, searchOptions, rowIndex, columnIndex, timeFormat, timeZone);
                     if (result != null) {
                         result.setFoundEdge(edges[rowIndex]);
                         return result;
@@ -246,9 +274,11 @@ public class SearchReplaceControllerImpl implements SearchReplaceController {
         return result;
     }
 
-    private SearchResult matchRegex(Object value, SearchOptions searchOptions, int rowIndex, int columnIndex) {
+    private SearchResult matchRegex(Object value, SearchOptions searchOptions, int rowIndex, int columnIndex, TimeFormat timeFormat, DateTimeZone timeZone) {
         boolean found;
-        String str = value != null ? value.toString() : "";
+
+        String str = value != null ? AttributeUtils.print(value, timeFormat, timeZone) : "";
+
         Matcher matcher = searchOptions.getRegexPattern().matcher(str);
         if (str.isEmpty()) {
             if (searchOptions.getRegionStart() > 0) {

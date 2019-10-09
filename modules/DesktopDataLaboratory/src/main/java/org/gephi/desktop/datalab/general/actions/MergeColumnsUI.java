@@ -50,11 +50,12 @@ import javax.swing.JButton;
 import javax.swing.JList;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeController;
-import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.datalab.api.DataLaboratoryHelper;
 import org.gephi.datalab.spi.columns.merge.AttributeColumnsMergeStrategy;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.Table;
 import org.gephi.ui.components.richtooltip.RichTooltip;
 import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Validator;
@@ -66,7 +67,7 @@ import org.openide.util.NbBundle;
 
 /**
  * UI for choosing columns to merge and a merge strategy.
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class MergeColumnsUI extends javax.swing.JPanel {
 
@@ -78,9 +79,9 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         EDGES_TABLE
     }
     private Mode mode = Mode.NODES_TABLE;
-    private AttributeTable table;
-    private DefaultListModel availableColumnsModel;
-    private DefaultListModel columnsToMergeModel;
+    private Table table;
+    private final DefaultListModel availableColumnsModel;
+    private final DefaultListModel columnsToMergeModel;
     private AttributeColumnsMergeStrategy[] availableMergeStrategies;
 
     /** Creates new form MergeColumnsUI */
@@ -127,14 +128,17 @@ public class MergeColumnsUI extends javax.swing.JPanel {
 
         columnsToMergeModel.addListDataListener(new ListDataListener() {
 
+            @Override
             public void intervalAdded(ListDataEvent e) {
                 refreshAvailableMergeStrategies();
             }
 
+            @Override
             public void intervalRemoved(ListDataEvent e) {
                 refreshAvailableMergeStrategies();
             }
 
+            @Override
             public void contentsChanged(ListDataEvent e) {
                 refreshAvailableMergeStrategies();
             }
@@ -145,18 +149,18 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         availableColumnsModel.clear();
         columnsToMergeModel.clear();
 
-        AttributeController ac = Lookup.getDefault().lookup(AttributeController.class);
-        AttributeColumn[] columns;
+        GraphModel am = Lookup.getDefault().lookup(GraphController.class).getGraphModel();
+        Column[] columns;
         if (mode == Mode.NODES_TABLE) {
-            table = ac.getModel().getNodeTable();
-            columns = table.getColumns();
+            table = am.getNodeTable();
+            columns = table.toArray();
         } else {
-            table = ac.getModel().getEdgeTable();
-            columns = table.getColumns();
+            table = am.getEdgeTable();
+            columns = table.toArray();
         }
 
-        for (int i = 0; i < columns.length; i++) {
-            availableColumnsModel.addElement(new ColumnWrapper(columns[i]));
+        for (Column column : columns) {
+            availableColumnsModel.addElement(new ColumnWrapper(column));
         }
 
         availableColumnsList.setModel(availableColumnsModel);
@@ -169,13 +173,13 @@ public class MergeColumnsUI extends javax.swing.JPanel {
 
         availableStrategiesComboBox.removeAllItems();
 
-        AttributeColumn[] columnsToMerge = getColumnsToMerge();
+        Column[] columnsToMerge = getColumnsToMerge();
 
         if (columnsToMerge.length < 1) {
             return;
         }
         AttributeColumnsMergeStrategy[] strategies = DataLaboratoryHelper.getDefault().getAttributeColumnsMergeStrategies();
-        ArrayList<AttributeColumnsMergeStrategy> availableStrategiesList = new ArrayList<AttributeColumnsMergeStrategy>();
+        ArrayList<AttributeColumnsMergeStrategy> availableStrategiesList = new ArrayList<>();
         for (AttributeColumnsMergeStrategy strategy : strategies) {
             strategy.setup(table, columnsToMerge);
             availableStrategiesList.add(strategy);//Add all but disallow executing the strategies that cannot be executed with given column
@@ -208,10 +212,10 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         return result;
     }
 
-    private AttributeColumn[] getColumnsToMerge() {
+    private Column[] getColumnsToMerge() {
         Object[] elements = columnsToMergeModel.toArray();
 
-        AttributeColumn[] columns = new AttributeColumn[elements.length];
+        Column[] columns = new Column[elements.length];
         for (int i = 0; i < elements.length; i++) {
             columns[i] = ((ColumnWrapper) elements[i]).getColumn();
         }
@@ -244,23 +248,23 @@ public class MergeColumnsUI extends javax.swing.JPanel {
      */
     class ColumnWrapper {
 
-        private AttributeColumn column;
+        private Column column;
 
-        public ColumnWrapper(AttributeColumn column) {
+        public ColumnWrapper(Column column) {
             this.column = column;
         }
 
-        public AttributeColumn getColumn() {
+        public Column getColumn() {
             return column;
         }
 
-        public void setColumn(AttributeColumn column) {
+        public void setColumn(Column column) {
             this.column = column;
         }
 
         @Override
         public String toString() {
-            return column.getTitle() + " -- " + column.getType().getTypeString();
+            return column.getTitle() + " -- " + column.getTypeClass().getSimpleName();
         }
     }
 
@@ -297,6 +301,7 @@ public class MergeColumnsUI extends javax.swing.JPanel {
             this.ui = ui;
         }
 
+        @Override
         public boolean validate(Problems problems, String string, ComboBoxModel t) {
             if (t.getSelectedItem() != null) {
                 if (ui.canExecuteSelectedStrategy()) {
@@ -334,6 +339,12 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         availableStrategiesComboBox = new javax.swing.JComboBox();
         infoLabel = new javax.swing.JLabel();
 
+        columnsToMergeList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                columnsToMergeListMouseClicked(evt);
+            }
+        });
         jScrollPane1.setViewportView(columnsToMergeList);
 
         description.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -342,6 +353,7 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         addColumnButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/desktop/datalab/resources/arrow.png"))); // NOI18N
         addColumnButton.setText(org.openide.util.NbBundle.getMessage(MergeColumnsUI.class, "MergeColumnsUI.addColumnButton.text")); // NOI18N
         addColumnButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 addColumnButtonActionPerformed(evt);
             }
@@ -350,11 +362,18 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         removeColumnButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/desktop/datalab/resources/arrow-180.png"))); // NOI18N
         removeColumnButton.setText(org.openide.util.NbBundle.getMessage(MergeColumnsUI.class, "MergeColumnsUI.removeColumnButton.text")); // NOI18N
         removeColumnButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 removeColumnButtonActionPerformed(evt);
             }
         });
 
+        availableColumnsList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                availableColumnsListMouseClicked(evt);
+            }
+        });
         jScrollPane2.setViewportView(availableColumnsList);
 
         availableColumnsLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -367,6 +386,7 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         availableStrategiesLabel.setText(org.openide.util.NbBundle.getMessage(MergeColumnsUI.class, "MergeColumnsUI.availableStrategiesLabel.text")); // NOI18N
 
         availableStrategiesComboBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 availableStrategiesComboBoxItemStateChanged(evt);
             }
@@ -454,6 +474,23 @@ public class MergeColumnsUI extends javax.swing.JPanel {
         refreshOkButton();
         infoLabel.setEnabled(availableStrategiesComboBox.getSelectedIndex() != -1);
     }//GEN-LAST:event_availableStrategiesComboBoxItemStateChanged
+
+    private void availableColumnsListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_availableColumnsListMouseClicked
+        if (evt.getClickCount() == 2) {
+            int index = availableColumnsList.locationToIndex(evt.getPoint());
+            availableColumnsList.setSelectedIndex(index);
+            moveElementsFromListToOtherList(availableColumnsList, columnsToMergeList);
+        }
+    }//GEN-LAST:event_availableColumnsListMouseClicked
+
+    private void columnsToMergeListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_columnsToMergeListMouseClicked
+        if (evt.getClickCount() == 2) {
+            int index = columnsToMergeList.locationToIndex(evt.getPoint());
+            columnsToMergeList.setSelectedIndex(index);
+            moveElementsFromListToOtherList(columnsToMergeList, availableColumnsList);
+        }
+    }//GEN-LAST:event_columnsToMergeListMouseClicked
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addColumnButton;
     private javax.swing.JLabel availableColumnsLabel;

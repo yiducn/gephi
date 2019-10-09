@@ -45,11 +45,10 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.time.Interval;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.Interval;
 import org.gephi.statistics.plugin.ChartUtils;
 import org.gephi.statistics.spi.DynamicStatistics;
 import org.jfree.chart.ChartFactory;
@@ -74,9 +73,9 @@ public class DynamicNbNodes implements DynamicStatistics {
     private Map<Double, Integer> counts;
 
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
+    public void execute(GraphModel graphModel) {
         this.graphModel = graphModel;
-        this.counts = new HashMap<Double, Integer>();
+        this.counts = new HashMap<>();
     }
 
     @Override
@@ -125,8 +124,8 @@ public class DynamicNbNodes implements DynamicStatistics {
 
         int count = graph.getNodeCount();
 
-        graph.setAttribute(NB_NODES, count, interval.getLow());
-        graph.setAttribute(NB_NODES, count, interval.getHigh());
+        graphModel.getGraphVisible().setAttribute(NB_NODES, count, interval.getLow());
+        graphModel.getGraphVisible().setAttribute(NB_NODES, count, interval.getHigh());
 
         counts.put(interval.getLow(), count);
         counts.put(interval.getHigh(), count);

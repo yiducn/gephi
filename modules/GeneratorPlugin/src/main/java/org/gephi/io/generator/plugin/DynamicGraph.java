@@ -42,6 +42,7 @@
 package org.gephi.io.generator.plugin;
 
 import java.util.Random;
+import org.gephi.graph.api.TimeRepresentation;
 import org.gephi.io.generator.spi.Generator;
 import org.gephi.io.generator.spi.GeneratorUI;
 import org.gephi.io.importer.api.ColumnDraft;
@@ -69,6 +70,7 @@ public class DynamicGraph implements Generator {
         double end = 2015.0;
         double tick = 1.0;
         ColumnDraft col = container.addNodeColumn("score", Integer.class, true);
+        container.setTimeRepresentation(TimeRepresentation.TIMESTAMP);
 
         NodeDraft[] nodeArray = new NodeDraft[numberOfNodes];
         for (int i = 0; i < numberOfNodes; i++) {
@@ -87,8 +89,8 @@ public class DynamicGraph implements Generator {
         }
 
         if (wiringProbability > 0) {
-//            AttributeColumn oldWeight = container.getAttributeModel().getEdgeTable().getColumn(PropertiesColumn.EDGE_WEIGHT.getIndex());
-//            AttributeColumn weightCol = container.getAttributeModel().getEdgeTable().replaceColumn(oldWeight, PropertiesColumn.EDGE_WEIGHT.getId(), PropertiesColumn.EDGE_WEIGHT.getTitle(), AttributeType.DYNAMIC_FLOAT, AttributeOrigin.PROPERTY, null);
+//            AttributeColumn oldWeight = container.getGraphModel().getEdgeTable().getColumn(PropertiesColumn.EDGE_WEIGHT.getIndex());
+//            AttributeColumn weightCol = container.getGraphModel().getEdgeTable().replaceColumn(oldWeight, PropertiesColumn.EDGE_WEIGHT.getId(), PropertiesColumn.EDGE_WEIGHT.getTitle(), AttributeType.DYNAMIC_FLOAT, AttributeOrigin.PROPERTY, null);
 
             for (int i = 0; i < numberOfNodes - 1; i++) {
                 NodeDraft node1 = nodeArray[i];

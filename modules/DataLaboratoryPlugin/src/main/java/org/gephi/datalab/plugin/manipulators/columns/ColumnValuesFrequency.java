@@ -49,12 +49,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.datalab.api.AttributeColumnsController;
 import org.gephi.datalab.plugin.manipulators.columns.ui.ColumnValuesFrequencyUI;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulator;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulatorUI;
+import org.gephi.graph.api.AttributeUtils;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.Table;
 import org.gephi.utils.HTMLEscape;
 import org.gephi.utils.TempDirUtils;
 import org.gephi.utils.TempDirUtils.TempDir;
@@ -66,58 +67,66 @@ import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
-import org.openide.util.lookup.ServiceProvider;
 
 /**
  * AttributeColumnsManipulator that shows a report with a list of the different values of a column and their frequency of appearance.
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 //@ServiceProvider(service = AttributeColumnsManipulator.class)
 public class ColumnValuesFrequency implements AttributeColumnsManipulator {
 
     public static final int MAX_PIE_CHART_CATEGORIES = 100;
 
-    public void execute(AttributeTable table, AttributeColumn column) {
+    @Override
+    public void execute(Table table, Column column) {
     }
 
+    @Override
     public String getName() {
         return NbBundle.getMessage(ColumnValuesFrequency.class, "ColumnValuesFrequency.name");
     }
 
+    @Override
     public String getDescription() {
         return NbBundle.getMessage(ColumnValuesFrequency.class, "ColumnValuesFrequency.description");
     }
 
-    public boolean canManipulateColumn(AttributeTable table, AttributeColumn column) {
+    @Override
+    public boolean canManipulateColumn(Table table, Column column) {
         AttributeColumnsController ac = Lookup.getDefault().lookup(AttributeColumnsController.class);
         return ac.getTableRowsCount(table) > 0;//Make sure that there is at least 1 row
     }
 
-    public AttributeColumnsManipulatorUI getUI(AttributeTable table,AttributeColumn column) {
+    @Override
+    public AttributeColumnsManipulatorUI getUI(Table table,Column column) {
         return new ColumnValuesFrequencyUI();
     }
 
+    @Override
     public int getType() {
         return 100;
     }
 
+    @Override
     public int getPosition() {
         return 0;
     }
 
+    @Override
     public Image getIcon() {
         return ImageUtilities.loadImage("org/gephi/datalab/plugin/manipulators/resources/frequency-list.png");
     }
 
-    public String getReportHTML(AttributeTable table, AttributeColumn column, Map<Object, Integer> valuesFrequencies, JFreeChart pieChart, Dimension dimension) {
+    public String getReportHTML(Table table, Column column, Map<Object, Integer> valuesFrequencies, JFreeChart pieChart, Dimension dimension) {
         AttributeColumnsController ac = Lookup.getDefault().lookup(AttributeColumnsController.class);
         int totalValuesCount = ac.getTableRowsCount(table);
-        ArrayList<Object> values = new ArrayList<Object>(valuesFrequencies.keySet());
+        ArrayList<Object> values = new ArrayList<>(valuesFrequencies.keySet());
 
         //Try to sort the values when they are comparable. (All objects of the set will have the same type) and not null:
         if (!values.isEmpty() && values.get(0) instanceof Comparable) {
             Collections.sort(values, new Comparator<Object>() {
 
+                @Override
                 public int compare(Object o1, Object o2) {
                     //Check for null objects because some comparables can't handle them (like Float...)
                     if (o1 == null) {
@@ -174,7 +183,7 @@ public class ColumnValuesFrequency implements AttributeColumnsManipulator {
         sb.append("<li>");
         sb.append("<b>");
         if (value != null) {
-            sb.append(HTMLEscape.stringToHTMLString(value.toString()));
+            sb.append(HTMLEscape.stringToHTMLString(AttributeUtils.print(value)));
         } else {
             sb.append("null");
         }
@@ -187,17 +196,17 @@ public class ColumnValuesFrequency implements AttributeColumnsManipulator {
         sb.append("</li>");
     }
 
-    public Map<Object, Integer> buildValuesFrequencies(AttributeTable table, AttributeColumn column){
+    public Map<Object, Integer> buildValuesFrequencies(Table table, Column column){
         AttributeColumnsController ac = Lookup.getDefault().lookup(AttributeColumnsController.class);
         return ac.calculateColumnValuesFrequencies(table, column);
     }
 
     public JFreeChart buildPieChart(final Map<Object, Integer> valuesFrequencies) {
-        final ArrayList<Object> values= new ArrayList<Object>(valuesFrequencies.keySet());
+        final ArrayList<Object> values = new ArrayList<>(valuesFrequencies.keySet());
         DefaultPieDataset pieDataset = new DefaultPieDataset();
 
         for (Object value : values) {
-            pieDataset.setValue(value != null ? "'" + value.toString() + "'" : "null", valuesFrequencies.get(value));
+            pieDataset.setValue(value != null ? "'" + AttributeUtils.print(value) + "'" : "null", valuesFrequencies.get(value));
         }
 
         JFreeChart chart = ChartFactory.createPieChart(NbBundle.getMessage(ColumnValuesFrequency.class, "ColumnValuesFrequency.report.piechart.title"), pieDataset, false, true, false);
@@ -207,10 +216,9 @@ public class ColumnValuesFrequency implements AttributeColumnsManipulator {
     private void writePieChart(final StringBuilder sb, JFreeChart chart, Dimension dimension) throws IOException {
 
         TempDir tempDir = TempDirUtils.createTempDir();
-        String imageFile = "";
         String fileName = "frequencies-pie-chart.png";
         File file = tempDir.createFile(fileName);
-        imageFile = "<center><img src=\"file:" + file.getAbsolutePath() + "\"</img></center>";
+        String imageFile = "<center><img src=\"file:" + file.getAbsolutePath() + "\"</img></center>";
         ChartUtilities.saveChartAsPNG(file, chart, dimension != null ? dimension.width : 1000, dimension != null ? dimension.height : 1000);
 
         sb.append(imageFile);

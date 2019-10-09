@@ -41,17 +41,15 @@
  */
 package org.gephi.ui.utils;
 
-import org.gephi.attribute.api.Table;
+import org.gephi.graph.api.Table;
 import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Validator;
 import org.openide.util.NbBundle;
 
 /**
- * Utils class to validate a string that contains a valid title for a column of
- * a
- * <code>AttributeTable</code>.
+ * Utils class to validate a string that contains a valid title for a column of a {@link Table}
  *
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class ColumnTitleValidator implements Validator<String> {
 

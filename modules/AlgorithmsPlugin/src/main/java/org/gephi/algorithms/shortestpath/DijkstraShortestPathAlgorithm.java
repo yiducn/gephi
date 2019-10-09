@@ -43,6 +43,7 @@ package org.gephi.algorithms.shortestpath;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Graph;
@@ -60,58 +61,60 @@ public class DijkstraShortestPathAlgorithm extends AbstractShortestPathAlgorithm
     public DijkstraShortestPathAlgorithm(Graph graph, Node sourceNode) {
         super(sourceNode);
         this.graph = graph;
-        predecessors = new HashMap<Node, Edge>();
+        predecessors = new HashMap<>();
     }
 
     @Override
     public void compute() {
 
         graph.readLock();
-        Set<Node> unsettledNodes = new HashSet<Node>();
-        Set<Node> settledNodes = new HashSet<Node>();
+        try {
+            Set<Node> unsettledNodes = new HashSet<>();
+            Set<Node> settledNodes = new HashSet<>();
 
-        //Initialize
-        for (Node node : graph.getNodes()) {
-            distances.put(node, Double.POSITIVE_INFINITY);
-        }
-        distances.put(sourceNode, 0d);
-        unsettledNodes.add(sourceNode);
-
-        while (!unsettledNodes.isEmpty()) {
-
-            // find node with smallest distance value
-            Double minDistance = Double.POSITIVE_INFINITY;
-            Node minDistanceNode = null;
-            for (Node k : unsettledNodes) {
-                Double dist = distances.get(k);
-                if (minDistanceNode == null) {
-                    minDistanceNode = k;
-                }
-
-                if (dist.compareTo(minDistance) < 0) {
-                    minDistance = dist;
-                    minDistanceNode = k;
-                }
+            //Initialize
+            for (Node node : graph.getNodes()) {
+                distances.put(node, Double.POSITIVE_INFINITY);
             }
-            unsettledNodes.remove(minDistanceNode);
-            settledNodes.add(minDistanceNode);
+            distances.put(sourceNode, 0d);
+            unsettledNodes.add(sourceNode);
 
-            for (Edge edge : graph.getEdges(minDistanceNode)) {
-                Node neighbor = graph.getOpposite(minDistanceNode, edge);
-                if (!settledNodes.contains(neighbor)) {
-                    double dist = getShortestDistance(minDistanceNode) + edgeWeight(edge);
-                    if (getShortestDistance(neighbor) > dist) {
+            while (!unsettledNodes.isEmpty()) {
 
-                        distances.put(neighbor, dist);
-                        predecessors.put(neighbor, edge);
-                        unsettledNodes.add(neighbor);
-                        maxDistance = Math.max(maxDistance, dist);
+                // find node with smallest distance value
+                Double minDistance = Double.POSITIVE_INFINITY;
+                Node minDistanceNode = null;
+                for (Node k : unsettledNodes) {
+                    Double dist = distances.get(k);
+                    if (minDistanceNode == null) {
+                        minDistanceNode = k;
+                    }
+
+                    if (dist.compareTo(minDistance) < 0) {
+                        minDistance = dist;
+                        minDistanceNode = k;
+                    }
+                }
+                unsettledNodes.remove(minDistanceNode);
+                settledNodes.add(minDistanceNode);
+
+                for (Edge edge : graph.getEdges(minDistanceNode)) {
+                    Node neighbor = graph.getOpposite(minDistanceNode, edge);
+                    if (!settledNodes.contains(neighbor)) {
+                        double dist = getShortestDistance(minDistanceNode) + edgeWeight(edge);
+                        if (getShortestDistance(neighbor) > dist) {
+
+                            distances.put(neighbor, dist);
+                            predecessors.put(neighbor, edge);
+                            unsettledNodes.add(neighbor);
+                            maxDistance = Math.max(maxDistance, dist);
+                        }
                     }
                 }
             }
+        } finally {
+            graph.readUnlockAll();
         }
-
-        graph.readUnlock();
     }
 
     private double getShortestDistance(Node destination) {
@@ -124,25 +127,7 @@ public class DijkstraShortestPathAlgorithm extends AbstractShortestPathAlgorithm
     }
 
     @Override
-    protected double edgeWeight(Edge edge) {
-        return edge.getWeight();
-    }
-
-    @Override
-    public Node getPredecessor(Node node) {
-        Edge edge = predecessors.get(node);
-        if (edge != null) {
-            if (edge.getSource() != node) {
-                return edge.getSource();
-            } else {
-                return edge.getTarget();
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public Edge getPredecessorIncoming(Node node) {
-        return predecessors.get(node);
+    public Map<Node, Edge> getPredecessors() {
+        return predecessors;
     }
 }

@@ -51,8 +51,7 @@ import java.util.List;
 import javax.swing.ButtonModel;
 import javax.swing.JCheckBox;
 import net.miginfocom.swing.MigLayout;
-import org.gephi.attribute.api.Column;
-import org.gephi.attribute.api.Origin;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.GraphController;
 import org.gephi.visualization.text.TextModelImpl;
 import org.openide.util.Lookup;
@@ -114,17 +113,15 @@ public class LabelAttributesPanel extends javax.swing.JPanel {
     private void refresh() {
         GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
 
-        List<Column> availableColumns = new ArrayList<Column>();
-        List<Column> selectedColumns = new ArrayList<Column>();
+        List<Column> availableColumns = new ArrayList<>();
+        List<Column> selectedColumns = new ArrayList<>();
         AttributesCheckBox[] target;
         if (elementButtonGroup.getSelection() == nodesToggleButton.getModel()) {
-            for (Column c : graphController.getAttributeModel().getNodeTable()) {
-                if (c.getOrigin().equals(Origin.DATA)) {
+            for (Column c : graphController.getGraphModel().getNodeTable()) {
+                if (!c.isProperty()) {
                     availableColumns.add(c);
-                } else if (showProperties) {
-                    if (c.getId().equalsIgnoreCase("label")) {
-                        availableColumns.add(c);
-                    }
+                } else if (showProperties && c.isProperty() && !c.getId().equals("timeset")) {
+                    availableColumns.add(c);
                 }
             }
 
@@ -134,11 +131,11 @@ public class LabelAttributesPanel extends javax.swing.JPanel {
             nodeCheckBoxs = new AttributesCheckBox[availableColumns.size()];
             target = nodeCheckBoxs;
         } else {
-            for (Column c : graphController.getAttributeModel().getEdgeTable()) {
-                if (c.getOrigin().equals(Origin.DATA)) {
+            for (Column c : graphController.getGraphModel().getEdgeTable()) {
+                if (!c.isProperty()) {
                     availableColumns.add(c);
                 } else if (showProperties) {
-                    if (c.getId().equalsIgnoreCase("label")) {
+                    if (showProperties && c.isProperty() && !c.getId().equals("timeset")) {
                         availableColumns.add(c);
                     }
                 }
@@ -163,8 +160,8 @@ public class LabelAttributesPanel extends javax.swing.JPanel {
     }
 
     public void unsetup() {
-        List<Column> nodeColumnsList = new ArrayList<Column>();
-        List<Column> edgeColumnsList = new ArrayList<Column>();
+        List<Column> nodeColumnsList = new ArrayList<>();
+        List<Column> edgeColumnsList = new ArrayList<>();
         if (nodeCheckBoxs != null) {
             for (AttributesCheckBox c : nodeCheckBoxs) {
                 if (c.isSelected()) {

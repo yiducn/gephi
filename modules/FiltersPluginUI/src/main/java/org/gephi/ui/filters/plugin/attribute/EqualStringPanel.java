@@ -52,6 +52,7 @@ import org.netbeans.validation.api.Problems;
 import org.netbeans.validation.api.Validator;
 import org.netbeans.validation.api.ui.ValidationGroup;
 import org.netbeans.validation.api.ui.ValidationPanel;
+import org.openide.util.Exceptions;
 
 /**
  *
@@ -67,6 +68,7 @@ public class EqualStringPanel extends javax.swing.JPanel implements ActionListen
         okButton.addActionListener(this);
     }
 
+    @Override
     public void actionPerformed(ActionEvent evt) {
         FilterProperty pattern = filter.getProperties()[1];
         FilterProperty useRegex = filter.getProperties()[2];
@@ -78,7 +80,7 @@ public class EqualStringPanel extends javax.swing.JPanel implements ActionListen
                 useRegex.setValue(regexCheckbox.isSelected());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Exceptions.printStackTrace(e);
         }
     }
 
@@ -91,7 +93,7 @@ public class EqualStringPanel extends javax.swing.JPanel implements ActionListen
             textField.setText((String) pattern.getValue());
             regexCheckbox.setSelected((Boolean) useRegex.getValue());
         } catch (Exception e) {
-            e.printStackTrace();
+            Exceptions.printStackTrace(e);
         }
     }
 
@@ -102,6 +104,7 @@ public class EqualStringPanel extends javax.swing.JPanel implements ActionListen
         ValidationGroup group = validationPanel.getValidationGroup();
         validationPanel.addChangeListener(new ChangeListener() {
 
+            @Override
             public void stateChanged(ChangeEvent e) {
                 innerPanel.okButton.setEnabled(!validationPanel.isProblem());
             }
@@ -168,7 +171,7 @@ public class EqualStringPanel extends javax.swing.JPanel implements ActionListen
 
     private static class RegexValidator implements Validator<String> {
 
-        private EqualStringPanel panel;
+        private final EqualStringPanel panel;
 
         public RegexValidator(EqualStringPanel panel) {
             this.panel = panel;

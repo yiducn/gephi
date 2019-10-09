@@ -42,6 +42,7 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.ui.statistics.plugin;
 
 import org.gephi.graph.api.GraphController;
+import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 /**
@@ -81,7 +82,9 @@ public class EigenvectorCentralityPanel extends javax.swing.JPanel {
         try{
             int runs = Integer.parseInt(iterationTextField.getText());
             return runs;
-        }catch(Exception e){e.printStackTrace();}
+        }catch(Exception e){
+            Exceptions.printStackTrace(e);
+        }
         return 0;
     }
 
@@ -115,6 +118,7 @@ public class EigenvectorCentralityPanel extends javax.swing.JPanel {
         buttonGroup1.add(undirectedRadioButton);
         undirectedRadioButton.setText(org.openide.util.NbBundle.getMessage(EigenvectorCentralityPanel.class, "EigenvectorCentralityPanel.undirectedButton.text")); // NOI18N
         undirectedRadioButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 undirectedRadioButtonActionPerformed(evt);
             }

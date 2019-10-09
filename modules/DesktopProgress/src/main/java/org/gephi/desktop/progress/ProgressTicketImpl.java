@@ -76,14 +76,13 @@ public final class ProgressTicketImpl implements ProgressTicket {
                 handle.finish();
                 finished = true;
             } catch (Exception e) {
-                System.err.println("Progress Handle failed to finish");
             }
         }
     }
 
     /**
      * Finish the task and display a statusbar message
-     * @param finishMessage 
+     * @param finishMessage Finish message
      */
     @Override
     public void finish(String finishMessage) {
@@ -92,7 +91,6 @@ public final class ProgressTicketImpl implements ProgressTicket {
                 handle.finish();
                 finished = true;
             } catch (Exception e) {
-                System.err.println("Progress Handle failed to finish");
             }
             StatusDisplayer.getDefault().setStatusText(finishMessage);
         }
@@ -108,7 +106,7 @@ public final class ProgressTicketImpl implements ProgressTicket {
 
     /**
      * Notify the user about completed workunits.
-     * @param a cumulative number of workunits completed so far
+     * @param workunit cumulative number of workunits completed so far
      */
     @Override
     public void progress(int workunit) {
@@ -124,7 +122,7 @@ public final class ProgressTicketImpl implements ProgressTicket {
 
     /**
      * Notify the user about progress by showing message with details.
-     * @param details about the status of the task
+     * @param message details about the status of the task
      */
     @Override
     public void progress(String message) {

@@ -4,25 +4,16 @@
     <parent>
         <artifactId>gephi-parent</artifactId>
         <groupId>org.gephi</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9.3-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <groupId>org.gephi</groupId>
     <artifactId>graph-api</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9.3-SNAPSHOT</version>
     <packaging>nbm</packaging>
 
     <name>GraphAPI</name>
-
-    <!-- Additional repository for picking up graph-store (built separately) -->
-    <repositories>
-        <repository>
-            <id>gephi-snapshots</id>
-            <name>Gephi 3rd Party</name>
-            <url>http://nexus.gephi.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-    </repositories>
 
     <dependencies>
         <dependency>
@@ -31,13 +22,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>graphstore-api</artifactId>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>graphstore</artifactId>
-            <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.netbeans.api</groupId>
@@ -54,9 +39,9 @@
                     <publicPackages>
                         <publicPackage>org.gephi.graph.spi</publicPackage>
                         <publicPackage>org.gephi.graph.api</publicPackage>
-                        <publicPackage>org.gephi.attribute.api</publicPackage>
-                        <publicPackage>org.gephi.attribute.spi</publicPackage>
-                        <publicPackage>org.gephi.attribute.time</publicPackage>
+                        <publicPackage>org.gephi.graph.api.types</publicPackage>
+                        <publicPackage>it.unimi.dsi.fastutil.*</publicPackage>
+                        <publicPackage>org.joda.time.*</publicPackage>
                     </publicPackages>
                 </configuration>
             </plugin>

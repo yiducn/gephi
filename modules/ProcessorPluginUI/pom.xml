@@ -4,22 +4,18 @@
     <parent>
         <artifactId>gephi-parent</artifactId>
         <groupId>org.gephi</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9.3-SNAPSHOT</version>
 		<relativePath>../..</relativePath>
     </parent>
 
     <groupId>org.gephi</groupId>
     <artifactId>processor-plugin-ui</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9.3-SNAPSHOT</version>
     <packaging>nbm</packaging>
 
     <name>ProcessorPluginUI</name>
 
     <dependencies>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>dynamic-api</artifactId>
-        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>io-importer-api</artifactId>

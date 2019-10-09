@@ -54,12 +54,13 @@ import java.util.Random;
 public class PaletteUtils {
 
     /**
-     * Return different colors
-     * @param num
-     * @return
+     * Return different colors.
+     * 
+     * @param num number of requested colors
+     * @return list of colors
      */
     public static List<Color> getSequenceColors(int num) {
-        List<Color> colors = new LinkedList<Color>();
+        List<Color> colors = new LinkedList<>();
 
         //On choisit H et S au random
         Random random = new Random();

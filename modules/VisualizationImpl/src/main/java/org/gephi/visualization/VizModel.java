@@ -51,11 +51,15 @@ import javax.swing.SwingUtilities;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
 import org.gephi.project.api.Workspace;
 import org.gephi.ui.utils.ColorUtils;
 import org.gephi.visualization.apiimpl.GraphDrawable;
 import org.gephi.visualization.apiimpl.VizConfig;
 import org.gephi.visualization.text.TextModelImpl;
+import org.openide.util.Lookup;
 
 /**
  *
@@ -69,12 +73,8 @@ public class VizModel {
     protected float[] cameraPosition;
     protected float[] cameraTarget;
     protected TextModelImpl textModel;
-    protected boolean use3d;
-    protected boolean lighting;
-    protected boolean culling;
-    protected boolean material;
     protected Color backgroundColor;
-    protected boolean rotatingEnable;
+    protected float[] backgroundColorComponents = new float[4];
     protected boolean showEdges;
     protected boolean lightenNonSelectedAuto;
     protected boolean autoSelectNeighbor;
@@ -87,15 +87,17 @@ public class VizModel {
     protected float[] edgeOutSelectionColor;
     protected float[] edgeBothSelectionColor;
     protected boolean adjustByText;
-    protected String nodeModeler;
     protected float edgeScale;
     //Listener
-    protected List<PropertyChangeListener> listeners = new ArrayList<PropertyChangeListener>();
+    protected List<PropertyChangeListener> listeners = new ArrayList<>();
     private boolean defaultModel = false;
 
-    public VizModel() {
+    public VizModel(Workspace workspace) {
         defaultValues();
         limits = VizController.getInstance().getLimits();
+
+        GraphModel gm = Lookup.getDefault().lookup(GraphController.class).getGraphModel(workspace);
+        textModel.setTextColumns(new Column[]{gm.getNodeTable().getColumn("label")}, new Column[]{gm.getEdgeTable().getColumn("label")});
     }
 
     public VizModel(boolean defaultModel) {
@@ -135,12 +137,8 @@ public class VizModel {
         cameraPosition = Arrays.copyOf(config.getDefaultCameraPosition(), 3);
         cameraTarget = Arrays.copyOf(config.getDefaultCameraTarget(), 3);
         textModel = new TextModelImpl();
-        use3d = config.isDefaultUse3d();
-        lighting = use3d;
-        culling = use3d;
-        material = use3d;
-        rotatingEnable = use3d;
         backgroundColor = config.getDefaultBackgroundColor();
+        backgroundColorComponents = backgroundColor.getRGBComponents(backgroundColorComponents);
 
         showEdges = config.isDefaultShowEdges();
         lightenNonSelectedAuto = config.isDefaultLightenNonSelectedAuto();
@@ -150,7 +148,6 @@ public class VizModel {
         edgeHasUniColor = config.isDefaultEdgeHasUniColor();
         edgeUniColor = config.getDefaultEdgeUniColor().getRGBComponents(null);
         adjustByText = config.isDefaultAdjustByText();
-        nodeModeler = use3d ? "CompatibilityNodeSphereModeler" : "CompatibilityNodeDiskModeler";
         edgeSelectionColor = config.isDefaultEdgeSelectionColor();
         edgeInSelectionColor = config.getDefaultEdgeInSelectedColor().getRGBComponents(null);
         edgeOutSelectionColor = config.getDefaultEdgeOutSelectedColor().getRGBComponents(null);
@@ -170,6 +167,10 @@ public class VizModel {
     public Color getBackgroundColor() {
         return backgroundColor;
     }
+    
+    public float[] getBackgroundColorComponents() {
+        return backgroundColorComponents;
+    }
 
     public float[] getCameraPosition() {
         return cameraPosition;
@@ -177,10 +178,6 @@ public class VizModel {
 
     public float[] getCameraTarget() {
         return cameraTarget;
-    }
-
-    public boolean isCulling() {
-        return culling;
     }
 
     public boolean isShowEdges() {
@@ -203,18 +200,6 @@ public class VizModel {
         return lightenNonSelectedAuto;
     }
 
-    public boolean isLighting() {
-        return lighting;
-    }
-
-    public boolean isMaterial() {
-        return material;
-    }
-
-    public boolean isRotatingEnable() {
-        return rotatingEnable;
-    }
-
     public TextModelImpl getTextModel() {
         return textModel;
     }
@@ -223,16 +208,8 @@ public class VizModel {
         return uniColorSelected;
     }
 
-    public boolean isUse3d() {
-        return use3d;
-    }
-
     public VizConfig getConfig() {
         return config;
-    }
-
-    public String getNodeModeler() {
-        return nodeModeler;
     }
 
     public boolean isEdgeSelectionColor() {
@@ -268,6 +245,7 @@ public class VizModel {
 
     public void setBackgroundColor(Color backgroundColor) {
         this.backgroundColor = backgroundColor;
+        this.backgroundColorComponents = backgroundColor.getRGBComponents(this.backgroundColorComponents);
         fireProperyChange("backgroundColor", null, backgroundColor);
     }
 
@@ -299,21 +277,6 @@ public class VizModel {
     public void setUniColorSelected(boolean uniColorSelected) {
         this.uniColorSelected = uniColorSelected;
         fireProperyChange("uniColorSelected", null, uniColorSelected);
-    }
-
-    public void setUse3d(boolean use3d) {
-        this.use3d = use3d;
-        //Additional
-        this.lighting = use3d;
-        this.culling = use3d;
-        this.rotatingEnable = use3d;
-        this.material = use3d;
-        fireProperyChange("use3d", null, use3d);
-    }
-
-    public void setNodeModeler(String nodeModeler) {
-        this.nodeModeler = nodeModeler;
-        fireProperyChange("nodeModeler", null, nodeModeler);
     }
 
     public void setEdgeSelectionColor(boolean edgeSelectionColor) {
@@ -389,16 +352,7 @@ public class VizModel {
                         cameraTarget[0] = Float.parseFloat(reader.getAttributeValue(null, "x"));
                         cameraTarget[1] = Float.parseFloat(reader.getAttributeValue(null, "y"));
                         cameraTarget[2] = Float.parseFloat(reader.getAttributeValue(null, "z"));
-                    } else if ("use3d".equalsIgnoreCase(name)) {
-                        setUse3d(Boolean.parseBoolean(reader.getAttributeValue(null, "value")));
-                    } else if ("lighting".equalsIgnoreCase(name)) {
-                        lighting = Boolean.parseBoolean(reader.getAttributeValue(null, "value"));
-                    } else if ("culling".equalsIgnoreCase(name)) {
-                        culling = Boolean.parseBoolean(reader.getAttributeValue(null, "value"));
-                    } else if ("material".equalsIgnoreCase(name)) {
-                        material = Boolean.parseBoolean(reader.getAttributeValue(null, "value"));
-                    } else if ("rotatingenable".equalsIgnoreCase(name)) {
-                        rotatingEnable = Boolean.parseBoolean(reader.getAttributeValue(null, "value"));
+
                     } else if ("showedges".equalsIgnoreCase(name)) {
                         setShowEdges(Boolean.parseBoolean(reader.getAttributeValue(null, "value")));
                     } else if ("lightennonselectedauto".equalsIgnoreCase(name)) {
@@ -426,8 +380,7 @@ public class VizModel {
                         setEdgeOutSelectionColor(ColorUtils.decode(reader.getAttributeValue(null, "value")).getRGBComponents(null));
                     } else if ("edgeBothSelectionColor".equalsIgnoreCase(name)) {
                         setEdgeBothSelectionColor(ColorUtils.decode(reader.getAttributeValue(null, "value")).getRGBComponents(null));
-                    } else if ("nodemodeler".equalsIgnoreCase(name)) {
-                        setNodeModeler(reader.getAttributeValue(null, "value"));
+
                     } else if ("edgeScale".equalsIgnoreCase(name)) {
                         setEdgeScale(Float.parseFloat(reader.getAttributeValue(null, "value")));
                     }
@@ -442,9 +395,6 @@ public class VizModel {
     }
 
     public void writeXML(XMLStreamWriter writer) throws XMLStreamException {
-
-        writer.writeStartElement("vizmodel");
-
         //Fast refreh
         GraphDrawable drawable = VizController.getInstance().getDrawable();
         cameraPosition = Arrays.copyOf(drawable.getCameraLocation(), 3);
@@ -463,27 +413,6 @@ public class VizModel {
         writer.writeAttribute("x", Float.toString(cameraTarget[0]));
         writer.writeAttribute("y", Float.toString(cameraTarget[1]));
         writer.writeAttribute("z", Float.toString(cameraTarget[2]));
-        writer.writeEndElement();
-
-        //Boolean values
-        writer.writeStartElement("use3d");
-        writer.writeAttribute("value", String.valueOf(use3d));
-        writer.writeEndElement();
-
-        writer.writeStartElement("lighting");
-        writer.writeAttribute("value", String.valueOf(lighting));
-        writer.writeEndElement();
-
-        writer.writeStartElement("culling");
-        writer.writeAttribute("value", String.valueOf(culling));
-        writer.writeEndElement();
-
-        writer.writeStartElement("material");
-        writer.writeAttribute("value", String.valueOf(material));
-        writer.writeEndElement();
-
-        writer.writeStartElement("rotatingenable");
-        writer.writeAttribute("value", String.valueOf(rotatingEnable));
         writer.writeEndElement();
 
         writer.writeStartElement("showedges");
@@ -539,16 +468,9 @@ public class VizModel {
         writer.writeAttribute("value", ColorUtils.encode(ColorUtils.decode(edgeBothSelectionColor)));
         writer.writeEndElement();
 
-        //Misc
-        writer.writeStartElement("nodemodeler");
-        writer.writeAttribute("value", nodeModeler);
-        writer.writeEndElement();
-
         //Float
         writer.writeStartElement("edgeScale");
         writer.writeAttribute("value", String.valueOf(edgeScale));
-        writer.writeEndElement();
-
         writer.writeEndElement();
     }
 }

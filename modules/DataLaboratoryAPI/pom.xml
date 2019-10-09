@@ -4,13 +4,13 @@
     <parent>
         <artifactId>gephi-parent</artifactId>
         <groupId>org.gephi</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9.3-SNAPSHOT</version>
 		<relativePath>../..</relativePath>
     </parent>
 
     <groupId>org.gephi</groupId>
     <artifactId>datalab-api</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9.3-SNAPSHOT</version>
     <packaging>nbm</packaging>
 
     <name>DataLaboratoryAPI</name>
@@ -19,10 +19,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>utils</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>dynamic-api</artifactId>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -55,14 +51,8 @@
                     <publicPackages>
                         <publicPackage>org.gephi.datalab.api</publicPackage>
                         <publicPackage>org.gephi.datalab.api.datatables</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.columns</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.columns.merge</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.edges</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.general</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.nodes</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.rows.merge</publicPackage>
-                        <publicPackage>org.gephi.datalab.spi.values</publicPackage>
+                        <publicPackage>org.gephi.datalab.spi.*</publicPackage>
+                        <publicPackage>org.gephi.datalab.utils</publicPackage>
                     </publicPackages>
                 </configuration>
             </plugin>

@@ -41,7 +41,7 @@
  */
 package org.gephi.visualization.api;
 
-import org.gephi.attribute.api.Column;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Node;
 
@@ -51,6 +51,12 @@ import org.gephi.graph.api.Node;
  */
 public interface VisualizationController {
 
+    public void resetSelection();
+    
+    public void resetNodesSelection();
+    
+    public void resetEdgesSelection();
+    
     public void selectNodes(Node[] nodes);
 
     public void selectEdges(Edge[] edges);

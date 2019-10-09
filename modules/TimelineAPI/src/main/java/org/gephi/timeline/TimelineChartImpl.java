@@ -43,7 +43,9 @@ package org.gephi.timeline;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import org.gephi.data.attributes.api.AttributeColumn;
+import org.gephi.graph.api.Graph;
+import org.gephi.graph.api.types.IntervalMap;
+import org.gephi.graph.api.types.TimestampMap;
 import org.gephi.timeline.api.TimelineChart;
 
 /**
@@ -52,7 +54,7 @@ import org.gephi.timeline.api.TimelineChart;
  */
 public class TimelineChartImpl implements TimelineChart {
 
-    private final AttributeColumn column;
+    private final String column;
     private final Number[] x;
     private final Number[] y;
     private final Number minY;
@@ -60,7 +62,7 @@ public class TimelineChartImpl implements TimelineChart {
     private final Number minX;
     private final Number maxX;
 
-    public TimelineChartImpl(AttributeColumn column, Number[] x, Number y[]) {
+    public TimelineChartImpl(String column, Number[] x, Number y[]) {
         this.column = column;
         this.x = x;
         this.y = y;
@@ -117,7 +119,7 @@ public class TimelineChartImpl implements TimelineChart {
     }
 
     @Override
-    public AttributeColumn getColumn() {
+    public String getColumn() {
         return column;
     }
 
@@ -128,13 +130,13 @@ public class TimelineChartImpl implements TimelineChart {
         }
         Number t = yValues[0];
         if (t instanceof Double) {
-            return new Double(min);
+            return min;
         } else if (t instanceof Float) {
             return new Float(min);
         } else if (t instanceof Short) {
-            return new Short((short) min);
+            return (short) min;
         } else if (t instanceof Long) {
-            return new Long((long) min);
+            return (long) min;
         } else if (t instanceof BigInteger) {
             return new BigDecimal(min);
         }
@@ -148,16 +150,80 @@ public class TimelineChartImpl implements TimelineChart {
         }
         Number t = yValues[0];
         if (t instanceof Double) {
-            return new Double(max);
+            return max;
         } else if (t instanceof Float) {
             return new Float(max);
         } else if (t instanceof Short) {
-            return new Short((short) max);
+            return (short) max;
         } else if (t instanceof Long) {
-            return new Long((long) max);
+            return (long) max;
         } else if (t instanceof BigInteger) {
             return new BigDecimal(max);
         }
         return max;
+    }
+
+    public static TimelineChartImpl of(Graph graph, String column) {
+        if (graph != null && column != null) {
+            Object dynamicValue = graph.getAttribute(column);
+            if (dynamicValue instanceof IntervalMap) {
+                return TimelineChartImpl.of(column, (IntervalMap) dynamicValue);
+            } else if (dynamicValue instanceof TimestampMap) {
+                return TimelineChartImpl.of(column, (TimestampMap) dynamicValue);
+            }
+        }
+
+        return null;
+    }
+
+    public static TimelineChartImpl of(String column, IntervalMap dynamicValue) {
+        double[] lowsAndHighs = dynamicValue.getIntervals();
+        Object[] values = dynamicValue.toValuesArray();
+
+        final Number[] xs = new Number[lowsAndHighs.length];
+        final Number[] ys = new Number[lowsAndHighs.length];
+
+        for (int i = 0; i < lowsAndHighs.length; i += 2) {
+            xs[i] = lowsAndHighs[i];
+            xs[i + 1] = lowsAndHighs[i + 1];
+
+            Number numValue = (Number) values[i];
+            if (numValue == null) {
+                numValue = 0.0;
+            }
+
+            ys[i] = numValue;
+            ys[i + 1] = numValue;
+        }
+
+        if (xs.length > 0) {
+            return new TimelineChartImpl(column, xs, ys);
+        } else {
+            return null;
+        }
+    }
+
+    public static TimelineChartImpl of(String column, TimestampMap dynamicValue) {
+        double[] timestamps = dynamicValue.getTimestamps();
+        Object[] values = dynamicValue.toValuesArray();
+
+        final Number[] xs = new Number[timestamps.length];
+        final Number[] ys = new Number[timestamps.length];
+
+        for (int i = 0; i < timestamps.length; i++) {
+            xs[i] = timestamps[i];
+            Number numValue = (Number) values[i];
+            if (numValue == null) {
+                numValue = 0.0;
+            }
+
+            ys[i] = numValue;
+        }
+
+        if (xs.length > 0) {
+            return new TimelineChartImpl(column, xs, ys);
+        } else {
+            return null;
+        }
     }
 }

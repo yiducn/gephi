@@ -41,14 +41,13 @@
  */
 package org.gephi.io.importer.impl;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import org.gephi.io.importer.api.ElementDraftFactory;
+import org.gephi.io.importer.api.ElementDraft;
+import org.gephi.io.importer.api.Issue;
+import org.openide.util.NbBundle;
 
-/**
- *
- * @author mbastian
- */
-public class ElementFactoryImpl implements ElementDraftFactory {
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ElementFactoryImpl implements ElementDraft.Factory {
 
     protected final ImportContainerImpl container;
     protected final static AtomicInteger NODE_IDS = new AtomicInteger();
@@ -60,31 +59,29 @@ public class ElementFactoryImpl implements ElementDraftFactory {
 
     @Override
     public NodeDraftImpl newNodeDraft() {
-        NodeDraftImpl node = new NodeDraftImpl(container, "n" + NODE_IDS.getAndIncrement());
-        return node;
+        return new NodeDraftImpl(container, String.valueOf(NODE_IDS.getAndIncrement()));
     }
 
     @Override
     public NodeDraftImpl newNodeDraft(String id) {
         if (id == null) {
-            throw new NullPointerException("Node id can't be null");
+            String message = NbBundle.getMessage(ElementFactoryImpl.class, "ElementFactoryException_NullNodeId");
+            container.getReport().logIssue(new Issue(message, Issue.Level.CRITICAL));
         }
-        NodeDraftImpl node = new NodeDraftImpl(container, id);
-        return node;
+        return new NodeDraftImpl(container, id);
     }
 
     @Override
     public EdgeDraftImpl newEdgeDraft() {
-        EdgeDraftImpl edge = new EdgeDraftImpl(container, "e" + EDGE_IDS.getAndIncrement());
-        return edge;
+        return new EdgeDraftImpl(container, String.valueOf(EDGE_IDS.getAndIncrement()));
     }
 
     @Override
     public EdgeDraftImpl newEdgeDraft(String id) {
         if (id == null) {
-            throw new NullPointerException("Node id can't be null");
+            String message = NbBundle.getMessage(ElementFactoryImpl.class, "ElementFactoryException_NullEdgeId");
+            container.getReport().logIssue(new Issue(message, Issue.Level.CRITICAL));
         }
-        EdgeDraftImpl edge = new EdgeDraftImpl(container, id);
-        return edge;
+        return new EdgeDraftImpl(container, id);
     }
 }

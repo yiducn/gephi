@@ -47,13 +47,13 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.gephi.io.importer.api.Database;
 import org.gephi.io.importer.plugin.database.EdgeListDatabaseImpl;
-import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileLock;
+import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
+import org.openide.util.Exceptions;
 
 /**
  *
@@ -62,7 +62,7 @@ import org.openide.filesystems.FileUtil;
 public class EdgeListDatabaseManager {
 
     private FileObject databaseConfigurations;
-    private List<Database> edgeListDatabases = new ArrayList<Database>();
+    private List<Database> edgeListDatabases = new ArrayList<>();
 //    private Map<String, EdgeListDatabase> nameToInstance = new HashMap<String, EdgeListDatabase>();
 
     public EdgeListDatabaseManager() {
@@ -74,7 +74,7 @@ public class EdgeListDatabaseManager {
     }
 
     public List<String> getNames() {
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         for (Database db : edgeListDatabases) {
             names.add(db.getName());
         }
@@ -95,8 +95,8 @@ public class EdgeListDatabaseManager {
 
     private void load() {
         if (databaseConfigurations == null) {
-            databaseConfigurations =
-                    FileUtil.getConfigFile("EdgeListDatabase");
+            databaseConfigurations
+                    = FileUtil.getConfigFile("EdgeListDatabase");
         }
 
         if (databaseConfigurations != null) {
@@ -109,15 +109,8 @@ public class EdgeListDatabaseManager {
                 if (unserialized != null) {
                     edgeListDatabases = unserialized;
                 }
-            } catch (java.io.InvalidClassException e) {
-            } catch (EOFException eofe) {
-                // Empty configuration: do nothing
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            } catch (Exception e) {
+                Exceptions.printStackTrace(e);
             } finally {
                 if (is != null) {
                     try {
@@ -144,8 +137,7 @@ public class EdgeListDatabaseManager {
             ois = new ObjectOutputStream(databaseConfigurations.getOutputStream(lock));
             ois.writeObject(edgeListDatabases);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            Exceptions.printStackTrace(e);
         } finally {
             if (ois != null) {
                 try {

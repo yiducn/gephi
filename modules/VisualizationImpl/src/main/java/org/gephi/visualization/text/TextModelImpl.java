@@ -50,9 +50,9 @@ import javax.swing.event.ChangeListener;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
 import org.gephi.project.api.Workspace;
 import org.gephi.ui.utils.ColorUtils;
 import org.gephi.visualization.VizController;
@@ -76,7 +76,7 @@ public class TextModelImpl {
     protected float[] edgeColor = {0f, 0f, 0f, 1f};
     protected float nodeSizeFactor = 0.5f;//Between 0 and 1
     protected float edgeSizeFactor = 0.5f;
-    protected List<ChangeListener> listeners = new ArrayList<ChangeListener>();
+    protected List<ChangeListener> listeners = new ArrayList<>();
     protected Column[] nodeTextColumns = new Column[0];
     protected Column[] edgeTextColumns = new Column[0];
 
@@ -93,7 +93,7 @@ public class TextModelImpl {
         nodeColor = vizConfig.getDefaultNodeLabelColor().getRGBComponents(null);
         edgeColor = vizConfig.getDefaultEdgeLabelColor().getRGBComponents(null);
         selectedOnly = vizConfig.isDefaultShowLabelOnSelectedOnly();
-        colorMode = VizController.getInstance().getTextManager().getColorModes()[0];
+        colorMode = VizController.getInstance().getTextManager().getColorModes()[2];
         sizeMode = VizController.getInstance().getTextManager().getSizeModes()[1];
     }
 
@@ -246,9 +246,9 @@ public class TextModelImpl {
 
     public void readXML(XMLStreamReader reader, Workspace workspace) throws XMLStreamException {
         GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
-        AttributeModel attributeModel = graphController != null ? graphController.getAttributeModel(workspace) : null;
-        List<Column> nodeCols = new ArrayList<Column>();
-        List<Column> edgeCols = new ArrayList<Column>();
+        GraphModel graphModel = graphController != null ? graphController.getGraphModel(workspace) : null;
+        List<Column> nodeCols = new ArrayList<>();
+        List<Column> edgeCols = new ArrayList<>();
 
         boolean nodeColumn = false;
         boolean edgeColumn = false;
@@ -287,10 +287,12 @@ public class TextModelImpl {
                         edgeSizeFac = true;
                     } else if ("colormode".equalsIgnoreCase(name)) {
                         String colorModeClass = reader.getAttributeValue(null, "class");
-                        if (colorModeClass.equals("UniqueColorMode")) {
-                            colorMode = VizController.getInstance().getTextManager().getColorModes()[0];
+                        if (colorModeClass.equals("TextColorMode")) {
+                            colorMode = VizController.getInstance().getTextManager().getColorModes()[2];
                         } else if (colorModeClass.equals("ObjectColorMode")) {
                             colorMode = VizController.getInstance().getTextManager().getColorModes()[1];
+                        } else {
+                            colorMode = VizController.getInstance().getTextManager().getColorModes()[0];
                         }
                     } else if ("sizemode".equalsIgnoreCase(name)) {
                         String sizeModeClass = reader.getAttributeValue(null, "class");
@@ -307,13 +309,13 @@ public class TextModelImpl {
                         edgeColumn = true;
                     } else if ("column".equalsIgnoreCase(name)) {
                         String id = reader.getAttributeValue(null, "id");
-                        if (nodeColumn && attributeModel != null) {
-                            Column col = attributeModel.getNodeTable().getColumn(id);
+                        if (nodeColumn && graphModel != null) {
+                            Column col = graphModel.getNodeTable().getColumn(id);
                             if (col != null) {
                                 nodeCols.add(col);
                             }
-                        } else if (edgeColumn && attributeModel != null) {
-                            Column col = attributeModel.getEdgeTable().getColumn(id);
+                        } else if (edgeColumn && graphModel != null) {
+                            Column col = graphModel.getEdgeTable().getColumn(id);
                             if (col != null) {
                                 edgeCols.add(col);
                             }
@@ -402,6 +404,8 @@ public class TextModelImpl {
             writer.writeAttribute("class", "UniqueColorMode");
         } else if (colorMode instanceof ObjectColorMode) {
             writer.writeAttribute("class", "ObjectColorMode");
+        } else if (colorMode instanceof TextColorMode) {
+            writer.writeAttribute("class", "TextColorMode");
         }
         writer.writeEndElement();
 

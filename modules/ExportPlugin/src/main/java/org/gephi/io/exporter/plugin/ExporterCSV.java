@@ -43,12 +43,17 @@ package org.gephi.io.exporter.plugin;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.EdgeIterable;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.NodeIterable;
 import org.gephi.io.exporter.spi.CharacterExporter;
 import org.gephi.io.exporter.spi.GraphExporter;
 import org.gephi.project.api.Workspace;
@@ -56,10 +61,6 @@ import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
 
-/**
- *
- * @author Mathieu Bastian
- */
 public class ExporterCSV implements GraphExporter, CharacterExporter, LongTask {
 
     private static final String SEPARATOR = ";";
@@ -76,19 +77,29 @@ public class ExporterCSV implements GraphExporter, CharacterExporter, LongTask {
     private boolean cancel = false;
     private ProgressTicket progressTicket;
 
+    /**
+     * Formatter for limiting precision to 6 decimals, avoiding precision errors (epsilon).
+     */
+    private static final DecimalFormat FORMAT = new DecimalFormat("0.######");
+
+    static {
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.ENGLISH);
+        FORMAT.setDecimalFormatSymbols(symbols);
+    }
+
     @Override
     public boolean execute() {
         GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
-        Graph graph = null;
-        if (exportVisible) {
-            graph = graphModel.getGraphVisible();
-        } else {
-            graph = graphModel.getGraph();
-        }
+        Graph graph = exportVisible ? graphModel.getGraphVisible() : graphModel.getGraph();
+
+        graph.readLock();
         try {
             exportData(graph);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            graph.readUnlock();
+            Progress.finish(progressTicket);
         }
 
         return !cancel;
@@ -102,26 +113,23 @@ public class ExporterCSV implements GraphExporter, CharacterExporter, LongTask {
         if (!list) {
             if (header) {
                 writer.append(SEPARATOR);
-                Node[] nodes = graph.getNodes().toArray();
-                for (int i = 0; i < nodes.length; i++) {
-                    writeMatrixNode(nodes[i], i < nodes.length - 1);
+                int i = 0;
+                NodeIterable itr = graph.getNodes();
+                for (Node node : itr) {
+                    writeMatrixNode(node, i++ < max - 1);
+                    if (cancel) {
+                        itr.doBreak();
+                        return;
+                    }
                 }
                 writer.append(EOL);
             }
         }
 
         if (list) {
-            Node[] nodes = graph.getNodes().toArray();
-            for (int i = 0; i < nodes.length; i++) {
-                Node n = nodes[i];
-                List<Node> neighbours = new ArrayList<Node>();
-                for (Edge e : graph.getEdges(n)) {
-                    if (!e.isDirected() || (e.isDirected() && n == e.getSource())) {
-                        Node m = graph.getOpposite(n, e);
-                        neighbours.add(m);
-                    }
-                }
-
+            NodeIterable itr = graph.getNodes();
+            for (Node n : itr) {
+                List<Node> neighbours = new ArrayList<>();
                 for (Edge e : graph.getEdges(n)) {
                     if (!e.isDirected() || (e.isDirected() && n == e.getSource())) {
                         Node m = graph.getOpposite(n, e);
@@ -135,47 +143,54 @@ public class ExporterCSV implements GraphExporter, CharacterExporter, LongTask {
 
                 }
                 writer.append(EOL);
+
+                if (cancel) {
+                    itr.doBreak();
+                    return;
+                }
             }
         } else {
             Node[] nodes = graph.getNodes().toArray();
             for (Node n : nodes) {
                 if (cancel) {
-                    break;
+                    return;
                 }
                 writeMatrixNode(n, true);
                 for (int j = 0; j < nodes.length; j++) {
                     Node m = nodes[j];
-                    Edge e = graph.getEdge(n, m);
-                    writeEdge(e, j < nodes.length - 1);
+                    EdgeIterable edges = graph.getEdges(n, m);
+                    writeEdge(edges, j < nodes.length - 1);
                 }
                 Progress.progress(progressTicket);
                 writer.append(EOL);
             }
         }
 
-        graph.readUnlockAll();
-
         Progress.finish(progressTicket);
     }
 
-    private void writeEdge(Edge edge, boolean writeSeparator) throws IOException {
-        if (edge != null) {
-            if (edgeWeight) {
-                writer.append(Double.toString(edge.getWeight()));
-            } else {
-                writer.append(Double.toString(1.0));
-            }
-            if (writeSeparator) {
-                writer.append(SEPARATOR);
-            }
+    private void writeEdge(EdgeIterable edges, boolean writeSeparator) throws IOException {
+        float weight = 0;
+        boolean anyEdge = false;
+        for (Edge edge : edges) {
+            anyEdge = true;
+            weight += edge.getWeight();
+        }
 
+        if (anyEdge) {
+            if (edgeWeight) {
+                writer.append(FORMAT.format(weight));
+            } else {
+                writer.append(FORMAT.format(1.0));
+            }
         } else {
             if (writeZero) {
                 writer.append("0");
             }
-            if (writeSeparator) {
-                writer.append(SEPARATOR);
-            }
+        }
+
+        if (writeSeparator) {
+            writer.append(SEPARATOR);
         }
     }
 

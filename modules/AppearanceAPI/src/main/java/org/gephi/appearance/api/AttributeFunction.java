@@ -41,13 +41,17 @@
  */
 package org.gephi.appearance.api;
 
-import org.gephi.attribute.api.Column;
+import org.gephi.graph.api.Column;
 
 /**
- *
- * @author mbastian
+ * Attribute functions are based on attribute columns.
  */
 public interface AttributeFunction extends Function {
 
+    /**
+     * Returns the column this function finds its value from.
+     *
+     * @return column
+     */
     public Column getColumn();
 }

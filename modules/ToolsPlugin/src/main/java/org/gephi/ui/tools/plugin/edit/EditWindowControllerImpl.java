@@ -41,7 +41,6 @@
  */
 package org.gephi.ui.tools.plugin.edit;
 
-import java.lang.reflect.InvocationTargetException;
 import javax.swing.SwingUtilities;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Node;
@@ -53,7 +52,7 @@ import org.openide.windows.WindowManager;
 /**
  * Implementation of EditWindowController interface of Tools API.
  *
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 @ServiceProvider(service = EditWindowController.class)
 public class EditWindowControllerImpl implements EditWindowController {
@@ -104,7 +103,7 @@ public class EditWindowControllerImpl implements EditWindowController {
         @Override
         public void run() {
             EditToolTopComponent topComponent = findInstance();
-            open = topComponent.isOpened();
+            open = topComponent != null && topComponent.isOpened();
         }
     }
 
@@ -117,7 +116,7 @@ public class EditWindowControllerImpl implements EditWindowController {
             try {
                 SwingUtilities.invokeAndWait(runnable);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                Exceptions.printStackTrace(ex);
             }
         }
         return runnable.open;

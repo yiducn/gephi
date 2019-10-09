@@ -54,7 +54,7 @@ import java.util.ArrayList;
  * <p>Use <code>SparklineComponent</code> class to easily include interactive sparklines in your GUI</p>
  *
  * @see SparklineParameters
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class SparklineGraph {
 
@@ -131,7 +131,7 @@ public class SparklineGraph {
         Color highlightMaxColor = parameters.getHighlightMaxColor();
         int width = parameters.getWidth();
         int height = parameters.getHeight();
-        ArrayList<HighlightParameters> highlightsList = new ArrayList<HighlightParameters>();
+        ArrayList<HighlightParameters> highlightsList = new ArrayList<>();
         Color highlightValueColor = parameters.getHighligtValueColor() != null ? parameters.getHighligtValueColor() : SparklineParameters.DEFAULT_HIGHLIGHT_VALUE_COLOR;
         Integer highlightedValueXPosition = parameters.getHighlightedValueXPosition();
         String highlightedValueText = null;

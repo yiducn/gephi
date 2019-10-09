@@ -41,11 +41,8 @@
  */
 package org.gephi.preview;
 
-import java.awt.Dimension;
-import java.awt.Point;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import org.gephi.attribute.api.AttributeModel;
 import org.gephi.graph.api.*;
 import org.gephi.preview.api.*;
 import org.gephi.preview.spi.*;
@@ -123,7 +120,6 @@ public class PreviewControllerImpl implements PreviewController {
     @Override
     public synchronized void refreshPreview(Workspace workspace) {
         GraphModel graphModel = graphController.getGraphModel(workspace);
-        AttributeModel attributeModel = graphController.getAttributeModel(model.getWorkspace());
         PreviewModelImpl previewModel = getModel(workspace);
         previewModel.clear();
 
@@ -149,7 +145,7 @@ public class PreviewControllerImpl implements PreviewController {
         if (!mousePressed) {
             renderers = model.getManagedEnabledRenderers();
         } else {
-            ArrayList<Renderer> renderersList = new ArrayList<Renderer>();
+            ArrayList<Renderer> renderersList = new ArrayList<>();
             for (Renderer renderer : model.getManagedEnabledRenderers()) {
                 //Only mouse responsive renderers will be called while mouse is pressed
                 if (renderer instanceof MouseResponsiveRenderer) {
@@ -169,7 +165,7 @@ public class PreviewControllerImpl implements PreviewController {
             //Only build items of this builder if some renderer needs it:
             if (isItemBuilderNeeded(b, previewModel.getProperties(), renderers)) {
                 try {
-                    Item[] items = b.getItems(graph, attributeModel);
+                    Item[] items = b.getItems(graph);
                     if (items != null) {
                         previewModel.loadItems(b.getType(), items);
                     }
@@ -183,10 +179,6 @@ public class PreviewControllerImpl implements PreviewController {
         if (previewModel.getProperties().getFloatValue(PreviewProperty.VISIBILITY_RATIO) < 1f) {
             graphModel.destroyView(graph.getView());
         }
-
-        //Refresh dimensions
-        updateDimensions(previewModel, previewModel.getItems(Item.NODE));
-
 
         //Pre process renderers
         for (Renderer r : renderers) {
@@ -202,42 +194,6 @@ public class PreviewControllerImpl implements PreviewController {
         }
 
         return false;
-    }
-
-    public void updateDimensions(PreviewModelImpl model, Item[] nodeItems) {
-        float margin = model.getProperties().getFloatValue(PreviewProperty.MARGIN);  //percentage
-        float topLeftX = 0f;
-        float topLeftY = 0f;
-        float bottomRightX = 0f;
-        float bottomRightY = 0f;
-
-        for (Item nodeItem : nodeItems) {
-            float x = (Float) nodeItem.getData("x");
-            float y = (Float) nodeItem.getData("y");
-            float s = ((Float) nodeItem.getData("size")) / 2f;
-
-            if (x - s < topLeftX) {
-                topLeftX = x - s;
-            }
-            if (y - s < topLeftY) {
-                topLeftY = y - s;
-            }
-            if (x + s > bottomRightX) {
-                bottomRightX = x + s;
-            }
-            if (y + s > bottomRightY) {
-                bottomRightY = y + s;
-            }
-        }
-
-        float marginWidth = (bottomRightX - topLeftX) * (margin / 100f);
-        float marginHeight = (bottomRightY - topLeftY) * (margin / 100f);
-        topLeftX -= marginWidth;
-        topLeftY -= marginHeight;
-        bottomRightX += marginWidth;
-        bottomRightY += marginHeight;
-        model.setDimensions(new Dimension((int) (bottomRightX - topLeftX), (int) (bottomRightY - topLeftY)));
-        model.setTopLeftPosition(new Point((int) topLeftX, (int) topLeftY));
     }
 
     @Override
@@ -352,7 +308,7 @@ public class PreviewControllerImpl implements PreviewController {
     @Override
     public Renderer[] getRegisteredRenderers() {
         if (registeredRenderers == null) {
-            LinkedHashMap<String, Renderer> renderers = new LinkedHashMap<String, Renderer>();
+            LinkedHashMap<String, Renderer> renderers = new LinkedHashMap<>();
             for (Renderer r : Lookup.getDefault().lookupAll(Renderer.class)) {
                 renderers.put(r.getClass().getName(), r);
             }

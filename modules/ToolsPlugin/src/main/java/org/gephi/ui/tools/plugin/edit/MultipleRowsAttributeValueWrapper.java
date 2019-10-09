@@ -41,47 +41,45 @@
  */
 package org.gephi.ui.tools.plugin.edit;
 
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.type.DynamicType;
-import org.gephi.dynamic.api.DynamicModel;
-import org.gephi.dynamic.api.DynamicModel.TimeFormat;
-import org.gephi.graph.api.Attributable;
+import org.gephi.graph.api.AttributeUtils;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.Element;
+import org.gephi.graph.api.TimeFormat;
 import org.gephi.ui.tools.plugin.edit.EditWindowUtils.AttributeValueWrapper;
+import org.joda.time.DateTimeZone;
 
 /**
  *
- * @author Eduardo Ramos<eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper {
 
-    private Attributable[] rows;
-    private AttributeColumn column;
+    private final Element[] rows;
+    private final Column column;
     private Object value;
-    private TimeFormat currentTimeFormat;
+    private final TimeFormat currentTimeFormat;
+    private final DateTimeZone dateTimeZone;
 
-    public MultipleRowsAttributeValueWrapper(Attributable [] rows, AttributeColumn column, TimeFormat currentTimeFormat) {
+    public MultipleRowsAttributeValueWrapper(Element[] rows, Column column, TimeFormat currentTimeFormat, DateTimeZone dateTimeZone) {
         this.rows = rows;
         this.column = column;
         this.currentTimeFormat = currentTimeFormat;
+        this.dateTimeZone = dateTimeZone;
         this.value = null;
     }
 
     private String convertToStringIfNotNull() {
         if (value != null) {
-            if (value instanceof DynamicType) {
-                return ((DynamicType) value).toString(currentTimeFormat == DynamicModel.TimeFormat.DOUBLE);
-            } else {
-                return value.toString();
-            }
+            return AttributeUtils.print(value, currentTimeFormat, dateTimeZone);
         } else {
             return null;
         }
     }
 
-    private void setValueToAllEdges(Object object) {
+    private void setValueToAllElements(Object object) {
         this.value = object;
-        for (Attributable row : rows) {
-            row.getAttributes().setValue(column.getIndex(), value);
+        for (Element row : rows) {
+            row.setAttribute(column, value);
         }
     }
 
@@ -92,7 +90,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueByte(Byte object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -102,7 +100,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueShort(Short object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -112,7 +110,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueCharacter(Character object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -122,7 +120,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueString(String object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -132,7 +130,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueDouble(Double object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -142,7 +140,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueFloat(Float object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -152,7 +150,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueInteger(Integer object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -162,7 +160,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueBoolean(Boolean object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -172,7 +170,7 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueLong(Long object) {
-        setValueToAllEdges(object);
+        setValueToAllElements(object);
     }
 
     @Override
@@ -182,6 +180,6 @@ public class MultipleRowsAttributeValueWrapper implements AttributeValueWrapper 
 
     @Override
     public void setValueAsString(String value) {
-        setValueToAllEdges(column.getType().parse(value));
+        setValueToAllElements(AttributeUtils.parse(value, column.getTypeClass()));
     }
 }

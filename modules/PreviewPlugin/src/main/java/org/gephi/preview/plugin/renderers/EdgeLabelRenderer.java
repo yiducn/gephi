@@ -44,7 +44,12 @@ package org.gephi.preview.plugin.renderers;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfGState;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.Shape;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import org.gephi.graph.api.Edge;
@@ -191,11 +196,19 @@ public class EdgeLabelRenderer implements Renderer {
         Float x = item.getData(LABEL_X);
         Float y = item.getData(LABEL_Y);
 
+        //Skip if empty
+        if (label == null || label.trim().isEmpty()) {
+            return;
+        }
+
         //Outline
         DependantColor outlineDependantColor = properties.getValue(PreviewProperty.EDGE_LABEL_OUTLINE_COLOR);
         Float outlineSize = properties.getFloatValue(PreviewProperty.EDGE_LABEL_OUTLINE_SIZE);
         outlineSize = outlineSize * (font.getSize() / 32f);
         int outlineAlpha = (int) ((properties.getFloatValue(PreviewProperty.EDGE_LABEL_OUTLINE_OPACITY) / 100f) * 255f);
+        if (outlineAlpha < 0) {
+            outlineAlpha = 0;
+        }
         if (outlineAlpha > 255) {
             outlineAlpha = 255;
         }
@@ -211,6 +224,14 @@ public class EdgeLabelRenderer implements Renderer {
         }
     }
 
+    @Override
+    public CanvasSize getCanvasSize(
+            final Item item,
+            final PreviewProperties properties) {
+        //FIXME Compute the label canvas
+        return new CanvasSize();
+    }
+
     public void renderG2D(G2DTarget target, String label, float x, float y, Color color, float outlineSize, Color outlineColor) {
         Graphics2D graphics = target.getGraphics();
 
@@ -220,17 +241,23 @@ public class EdgeLabelRenderer implements Renderer {
         float posX = x - fm.stringWidth(label) / 2f;
         float posY = y + fm.getAscent() / 2f;
 
+        Shape outlineGlyph = null;
+
         if (outlineSize > 0) {
             FontRenderContext frc = graphics.getFontRenderContext();
             GlyphVector gv = font.createGlyphVector(frc, label);
-            Shape glyph = gv.getOutline(posX, posY);
+            outlineGlyph = gv.getOutline(posX, posY);
             graphics.setColor(outlineColor);
             graphics.setStroke(new BasicStroke(outlineSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            graphics.draw(glyph);
+            graphics.draw(outlineGlyph);
         }
 
         graphics.setColor(color);
-        graphics.drawString(label, posX, posY);
+        if (null == outlineGlyph) {
+            graphics.drawString(label, posX, posY);
+        } else {
+            graphics.fill(outlineGlyph);
+        }
     }
 
     public void renderSVG(SVGTarget target, Edge edge, String label, float x, float y, Color color, float outlineSize, Color outlineColor) {
@@ -239,7 +266,7 @@ public class EdgeLabelRenderer implements Renderer {
         if (outlineSize > 0) {
             Text labelTextOutline = target.createTextNode(label);
             Element outlineElem = target.createElement("text");
-            outlineElem.setAttribute("class", edge.getId().toString());
+            outlineElem.setAttribute("class", SVGUtils.idAsClassAttribute(edge.getId()));
             outlineElem.setAttribute("x", String.valueOf(x));
             outlineElem.setAttribute("y", String.valueOf(y));
             outlineElem.setAttribute("style", "text-anchor: middle; dominant-baseline: central;");
@@ -256,7 +283,7 @@ public class EdgeLabelRenderer implements Renderer {
         }
 
         Element labelElem = target.createElement("text");
-        labelElem.setAttribute("class", edge.getId().toString());
+        labelElem.setAttribute("class", SVGUtils.idAsClassAttribute(edge.getId()));
         labelElem.setAttribute("x", x + "");
         labelElem.setAttribute("y", y + "");
         labelElem.setAttribute("style", "text-anchor: middle; dominant-baseline: central;");

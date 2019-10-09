@@ -58,7 +58,7 @@ import org.openide.util.lookup.ServiceProvider;
  *
  * @author mbastian
  */
-@ServiceProvider(service = TransformerUI.class, position = 300)
+@ServiceProvider(service = TransformerUI.class, position = 400)
 public class RankingElementSizeTransformerUI implements TransformerUI {
 
     private RankingSizeTransformerPanel panel;
@@ -75,7 +75,7 @@ public class RankingElementSizeTransformerUI implements TransformerUI {
 
     @Override
     public String getDisplayName() {
-        return NbBundle.getMessage(UniqueElementColorTransformerUI.class, "Attribute.name");
+        return NbBundle.getMessage(RankingElementSizeTransformerUI.class, "Attribute.ranking.name");
     }
 
     @Override

@@ -4,22 +4,22 @@
     <parent>
         <artifactId>gephi-parent</artifactId>
         <groupId>org.gephi</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.9.3-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <groupId>org.gephi</groupId>
     <artifactId>ui-library-wrapper</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9.3-SNAPSHOT</version>
     <packaging>nbm</packaging>
 
     <name>UILibraryWrapper</name>
 
     <dependencies>
         <dependency>
-            <groupId>org.pushingpixels</groupId>
+            <groupId>com.github.insubstantial</groupId>
             <artifactId>flamingo</artifactId>
-            <version>5.0-gephi</version>
+            <version>7.3</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.xmlgraphics</groupId>
@@ -40,9 +40,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>org.swinglabs</groupId>
-            <artifactId>swingx</artifactId>
-            <version>1.6.1</version>
+            <groupId>org.swinglabs.swingx</groupId>
+            <artifactId>swingx-all</artifactId>
+            <version>1.6.5-1</version>
         </dependency>
         <dependency>
             <groupId>org.jdesktop</groupId>
@@ -57,12 +57,12 @@
         <dependency>
             <groupId>net.java.dev</groupId>
             <artifactId>colorchooser</artifactId>
-            <version>1.0</version>
+            <version>1.2</version>
         </dependency>
         <dependency>
             <groupId>com.miglayout</groupId>
             <artifactId>miglayout</artifactId>
-            <version>3.7.1</version>
+            <version>3.7.4</version>
         </dependency>
         <dependency>
             <groupId>net.java.dev</groupId>

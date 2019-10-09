@@ -57,7 +57,7 @@ import java.awt.Color;
  * </ul>
  * Several constructors are provided for various use cases.
  * @see SparklineGraph
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class SparklineParameters {
 
@@ -68,7 +68,7 @@ public class SparklineParameters {
 
         X_VALUES,
         Y_VALUES,
-        X_AND_Y_VALUES;
+        X_AND_Y_VALUES
     }
     public static final Color DEFAULT_LINE_COLOR = Color.BLUE;
     public static final Color DEFAULT_AREA_COLOR = new Color(DEFAULT_LINE_COLOR.getRed(), DEFAULT_LINE_COLOR.getRed(), DEFAULT_LINE_COLOR.getBlue(), 50);

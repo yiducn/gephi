@@ -41,8 +41,10 @@
  */
 package org.gephi.graph;
 
+import org.gephi.graph.api.Configuration;
 import org.gephi.graph.api.GraphController;
-import org.gephi.graph.store.GraphModelImpl;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.TimeRepresentation;
 import org.gephi.project.api.ProjectController;
 import org.gephi.project.api.Workspace;
 import org.openide.util.Lookup;
@@ -56,12 +58,12 @@ import org.openide.util.lookup.ServiceProvider;
 public class GraphControllerImpl implements GraphController {
 
     @Override
-    public synchronized GraphModelImpl getGraphModel() {
+    public synchronized GraphModel getGraphModel() {
         Workspace currentWorkspace = Lookup.getDefault().lookup(ProjectController.class).getCurrentWorkspace();
         if (currentWorkspace == null) {
             return null;
         }
-        GraphModelImpl model = currentWorkspace.getLookup().lookup(GraphModelImpl.class);
+        GraphModel model = currentWorkspace.getLookup().lookup(GraphModel.class);
         if (model == null) {
             model = newGraphModel(currentWorkspace);
         }
@@ -69,26 +71,18 @@ public class GraphControllerImpl implements GraphController {
     }
 
     @Override
-    public synchronized GraphModelImpl getGraphModel(Workspace workspace) {
-        GraphModelImpl model = workspace.getLookup().lookup(GraphModelImpl.class);
+    public synchronized GraphModel getGraphModel(Workspace workspace) {
+        GraphModel model = workspace.getLookup().lookup(GraphModel.class);
         if (model == null) {
             model = newGraphModel(workspace);
         }
         return model;
     }
 
-    @Override
-    public GraphModelImpl getAttributeModel() {
-        return getGraphModel();
-    }
-
-    @Override
-    public GraphModelImpl getAttributeModel(Workspace workspace) {
-        return getGraphModel(workspace);
-    }
-
-    private GraphModelImpl newGraphModel(Workspace workspace) {
-        GraphModelImpl graphModelImpl = new GraphModelImpl();
+    private GraphModel newGraphModel(Workspace workspace) {
+        Configuration config = new Configuration();
+        config.setTimeRepresentation(TimeRepresentation.INTERVAL);
+        GraphModel graphModelImpl = GraphModel.Factory.newInstance(config);
         workspace.add(graphModelImpl);
         return graphModelImpl;
     }

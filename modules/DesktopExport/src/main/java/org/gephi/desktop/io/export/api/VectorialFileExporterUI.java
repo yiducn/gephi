@@ -88,17 +88,21 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
     private File selectedFile;
     private JDialog dialog;
 
+    @Override
     public String getName() {
         return NbBundle.getMessage(VectorialFileExporterUI.class, "VectorialFileExporterUI_title");
     }
 
+    @Override
     public boolean isEnable() {
         return true;
     }
 
+    @Override
     public void action() {
         final String LAST_PATH = "VectorialFileExporterUI_Last_Path";
         final String LAST_PATH_DEFAULT = "VectorialFileExporterUI_Last_Path_Default";
+        final String LAST_FILE_FILTER = "VectorialFileExporterUI_Last_File_Filter";
 
         final ExportControllerUI exportController = Lookup.getDefault().lookup(ExportControllerUI.class);
         if (exportController == null) {
@@ -108,6 +112,7 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
         //Get last directory
         String lastPathDefault = NbPreferences.forModule(VectorialFileExporterUI.class).get(LAST_PATH_DEFAULT, null);
         String lastPath = NbPreferences.forModule(VectorialFileExporterUI.class).get(LAST_PATH, lastPathDefault);
+        String lastFileFilterString = NbPreferences.forModule(VectorialFileExporterUI.class).get(LAST_FILE_FILTER, null);
 
         //Options panel
         FlowLayout layout = new FlowLayout(FlowLayout.RIGHT);
@@ -116,6 +121,7 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
         optionsPanel.add(optionsButton);
         optionsButton.addActionListener(new ActionListener() {
 
+            @Override
             public void actionPerformed(ActionEvent e) {
                 ExporterUI exporterUI = exportController.getExportController().getUI(selectedExporter);
                 if (exporterUI != null) {
@@ -161,8 +167,12 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
         chooser.setDialogTitle(NbBundle.getMessage(VectorialFileExporterUI.class, "VectorialFileExporterUI_filechooser_title"));
         chooser.addPropertyChangeListener(JFileChooser.FILE_FILTER_CHANGED_PROPERTY, new PropertyChangeListener() {
 
+            @Override
             public void propertyChange(PropertyChangeEvent evt) {
                 DialogFileFilter fileFilter = (DialogFileFilter) evt.getNewValue();
+                
+                //Save file filter
+                NbPreferences.forModule(VectorialFileExporterUI.class).put(LAST_FILE_FILTER, fileFilter.getExtensions().toString());
 
                 //Options panel enabling
                 selectedBuilder = getExporter(fileFilter);
@@ -190,6 +200,7 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
         });
         chooser.addPropertyChangeListener(JFileChooser.SELECTED_FILE_CHANGED_PROPERTY, new PropertyChangeListener() {
 
+            @Override
             public void propertyChange(PropertyChangeEvent evt) {
                 if (evt.getNewValue() != null) {
                     selectedFile = (File) evt.getNewValue();
@@ -198,20 +209,35 @@ public final class VectorialFileExporterUI implements ExporterClassUI {
         });
 
         //File filters
-        DialogFileFilter defaultFilter = null;
+        DialogFileFilter defaultFileFilter = null;
+        DialogFileFilter lastFileFilter = null;
+
         for (VectorFileExporterBuilder vectorFileExporter : Lookup.getDefault().lookupAll(VectorFileExporterBuilder.class)) {
             for (FileType fileType : vectorFileExporter.getFileTypes()) {
                 DialogFileFilter dialogFileFilter = new DialogFileFilter(fileType.getName());
                 dialogFileFilter.addExtensions(fileType.getExtensions());
-                if (defaultFilter == null) {
-                    defaultFilter = dialogFileFilter;
+                if (defaultFileFilter == null) {
+                    defaultFileFilter = dialogFileFilter;
                 }
+
+                if (lastFileFilterString != null) {
+                    if (dialogFileFilter.getExtensions().toString().equals(lastFileFilterString)) {
+                        lastFileFilter = dialogFileFilter;
+                    }
+                }
+
                 chooser.addChoosableFileFilter(dialogFileFilter);
             }
         }
+
         chooser.setAcceptAllFileFilterUsed(false);
-        chooser.setFileFilter(defaultFilter);
-        selectedFile = new File(chooser.getCurrentDirectory(), "Untitled" + defaultFilter.getExtensions().get(0));
+
+        if (lastFileFilter != null) {
+            defaultFileFilter = lastFileFilter;
+        }
+
+        chooser.setFileFilter(defaultFileFilter);
+        selectedFile = new File(chooser.getCurrentDirectory(), "Untitled" + defaultFileFilter.getExtensions().get(0));
         chooser.setSelectedFile(selectedFile);
 
         //Show

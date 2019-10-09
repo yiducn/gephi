@@ -38,7 +38,7 @@ made subject to such option by the copyright holder.
 Contributor(s):
 
 Portions Copyrighted 2011 Gephi Consortium.
-*/
+ */
 package org.gephi.desktop.filters.query;
 
 import java.awt.datatransfer.Transferable;
@@ -54,6 +54,7 @@ import org.gephi.filters.spi.FilterBuilder;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Children;
 import org.openide.nodes.Node;
+import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
 import org.openide.util.datatransfer.PasteType;
@@ -79,7 +80,7 @@ public class QueryChildren extends Children.Array {
 
     @Override
     protected Collection<Node> initCollection() {
-        Collection<Node> nodesChildren = new ArrayList<Node>();
+        Collection<Node> nodesChildren = new ArrayList<>();
         if (query == null && topQuery == null) {
             nodesChildren.add(new HelpNode());
         } else {
@@ -127,15 +128,13 @@ public class QueryChildren extends Children.Array {
                         @Override
                         public Transferable paste() throws IOException {
                             FilterController filterController = Lookup.getDefault().lookup(FilterController.class);
-                            Query f = filterController.createQuery(fb.getFilter());
+                            Query f = filterController.createQuery(fb);
                             filterController.add(f);
                             return null;
                         }
                     };
-                } catch (UnsupportedFlavorException ex) {
-                    ex.printStackTrace();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                } catch (Exception ex) {
+                    Exceptions.printStackTrace(ex);
                 }
             }
             return null;

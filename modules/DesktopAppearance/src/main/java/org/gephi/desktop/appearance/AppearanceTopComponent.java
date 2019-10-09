@@ -110,6 +110,9 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
             centerPanel.setBackground(UIManager.getColor("NbExplorerView.background"));
         }
 
+        //Hide for now
+        localScaleButton.setVisible(false);
+
         refreshModel(model);
     }
 
@@ -127,9 +130,9 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
             refreshCenterPanel();
             refreshCombo();
             refreshControls();
-        } else if(pce.getPropertyName().equals(AppearanceUIModelEvent.SET_AUTO_APPLY)) {
+        } else if (pce.getPropertyName().equals(AppearanceUIModelEvent.SET_AUTO_APPLY)) {
             refreshControls();
-        } else if(pce.getPropertyName().equals(AppearanceUIModelEvent.START_STOP_AUTO_APPLY)) {
+        } else if (pce.getPropertyName().equals(AppearanceUIModelEvent.START_STOP_AUTO_APPLY)) {
             refreshControls();
         }
         //        if (pce.getPropertyName().equals(RankingUIModel.LIST_VISIBLE)) {
@@ -242,13 +245,18 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
                         comboBoxModel.addElement(NO_SELECTION);
                         comboBoxModel.setSelectedItem(NO_SELECTION);
 
-                        List<Function> rows = new ArrayList<Function>();
+                        List<Function> rows = new ArrayList<>();
                         rows.addAll(model.getFunctions());
 
                         Collections.sort(rows, new Comparator<Function>() {
                             @Override
                             public int compare(Function o1, Function o2) {
-                                return o1.getUI().getDisplayName().compareTo(o2.getUI().getDisplayName());
+                                if(o1.isAttribute() && !o2.isAttribute()) {
+                                    return 1;
+                                } else if(!o1.isAttribute() && o2.isAttribute()) {
+                                    return -1;
+                                }
+                                return o1.toString().compareTo(o2.toString());
                             }
                         });
                         for (Function r : rows) {
@@ -263,7 +271,10 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
                                 if (model != null) {
                                     if (!attibuteBox.getSelectedItem().equals(NO_SELECTION)) {
                                         Function selectedItem = (Function) attibuteBox.getSelectedItem();
-                                        controller.setSelectedFunction(selectedItem);
+                                        Function selectedFunction = model.getSelectedFunction();
+                                        if (selectedFunction != selectedItem) {
+                                            controller.setSelectedFunction(selectedItem);
+                                        }
                                     } else {
                                         controller.setSelectedFunction(null);
                                     }
@@ -282,31 +293,29 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                if (model != null) {
-                    if (model.getSelectedFunction() != null) {
-                        enableAutoButton.setEnabled(true);
-                        if (model.getAutoAppyTransformer() != null) {
-                            applyButton.setVisible(false);
-                            enableAutoButton.setSelected(true);
-                            AutoAppyTransformer aat = model.getAutoAppyTransformer();
-                            if (aat.isRunning()) {
-                                autoApplyButton.setVisible(false);
-                                stopAutoApplyButton.setVisible(true);
-                                stopAutoApplyButton.setSelected(true);
-                            } else {
-                                autoApplyButton.setVisible(true);
-                                autoApplyButton.setSelected(false);
-                                stopAutoApplyButton.setVisible(false);
-                            }
-                        } else {
+                if (model != null && model.getSelectedFunction() != null) {
+                    enableAutoButton.setEnabled(true);
+                    if (model.getAutoAppyTransformer() != null) {
+                        applyButton.setVisible(false);
+                        enableAutoButton.setSelected(true);
+                        AutoAppyTransformer aat = model.getAutoAppyTransformer();
+                        if (aat.isRunning()) {
                             autoApplyButton.setVisible(false);
+                            stopAutoApplyButton.setVisible(true);
+                            stopAutoApplyButton.setSelected(true);
+                        } else {
+                            autoApplyButton.setVisible(true);
+                            autoApplyButton.setSelected(false);
                             stopAutoApplyButton.setVisible(false);
-                            enableAutoButton.setSelected(false);
-                            applyButton.setVisible(true);
-                            applyButton.setEnabled(true);
                         }
-
+                    } else {
+                        autoApplyButton.setVisible(false);
+                        stopAutoApplyButton.setVisible(false);
+                        enableAutoButton.setSelected(false);
+                        applyButton.setVisible(true);
+                        applyButton.setEnabled(true);
                     }
+                    localScaleButton.setSelected(model.isLocalScale());
                     return;
                 }
                 //Disable
@@ -321,12 +330,11 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
 
     private void initControls() {
         //Add ranking controls
-        toolbar.addRankingControl(localScaleButton);
+//        toolbar.addRankingControl(localScaleButton);
         toolbar.addRankingControl(splineButton);
 
         //Add partition controls
-        toolbar.addPartitionControl(localScaleButton);
-
+//        toolbar.addPartitionControl(localScaleButton);
         //Actions
         localScaleButton.addActionListener(new ActionListener() {
             @Override
@@ -341,7 +349,7 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
                 if (splineEditor == null) {
                     splineEditor = new SplineEditor(NbBundle.getMessage(AppearanceTopComponent.class, "AppearanceTopComponent.splineEditor.title"));
                 }
-                Interpolator interpolator = function.getRanking().getInterpolator();
+                Interpolator interpolator = function.getInterpolator();
                 if (interpolator instanceof Interpolator.BezierInterpolator) {
                     Interpolator.BezierInterpolator bezierInterpolator = (Interpolator.BezierInterpolator) interpolator;
                     splineEditor.setControl1(bezierInterpolator.getControl1());
@@ -351,7 +359,7 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
                     splineEditor.setControl2(new Point2D.Float(1, 1));
                 }
                 splineEditor.setVisible(true);
-                function.getRanking().setInterpolator(
+                function.setInterpolator(
                         new Interpolator.BezierInterpolator(
                                 (float) splineEditor.getControl1().getX(), (float) splineEditor.getControl1().getY(),
                                 (float) splineEditor.getControl2().getX(), (float) splineEditor.getControl2().getY()));
@@ -535,6 +543,7 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
 
         controlToolbar.setFloatable(false);
         controlToolbar.setRollover(true);
+        controlToolbar.setMargin(new java.awt.Insets(0, 4, 0, 0));
         controlToolbar.setOpaque(false);
 
         localScaleButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/desktop/appearance/resources/funnel.png"))); // NOI18N
@@ -547,8 +556,8 @@ public class AppearanceTopComponent extends TopComponent implements Lookup.Provi
         splineButton.setClickedColor(new java.awt.Color(0, 51, 255));
         splineButton.setFocusPainted(false);
         splineButton.setFocusable(false);
+        splineButton.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         splineButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        splineButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
         controlToolbar.add(splineButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();

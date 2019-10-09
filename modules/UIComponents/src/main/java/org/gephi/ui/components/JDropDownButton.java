@@ -63,8 +63,8 @@ public class JDropDownButton extends JButton {
 
     private boolean mouseInButton = false;
     private boolean mouseInArrowArea = false;
-    private Map<String, Icon> regIcons = new HashMap<String, Icon>(5);
-    private Map<String, Icon> arrowIcons = new HashMap<String, Icon>(5);
+    private Map<String, Icon> regIcons = new HashMap<>(5);
+    private Map<String, Icon> arrowIcons = new HashMap<>(5);
     private static final String ICON_NORMAL = "normal"; //NOI18N
     private static final String ICON_PRESSED = "pressed"; //NOI18N
     private static final String ICON_ROLLOVER = "rollover"; //NOI18N
@@ -82,7 +82,6 @@ public class JDropDownButton extends JButton {
     public static final String PROP_DROP_DOWN_MENU = "dropDownMenu";
     private PopupMenuListener menuListener;
 
-    /** Creates a new instance of MenuToggleButton */
     public JDropDownButton(Icon icon, JPopupMenu popup) {
         assert null != icon;
 

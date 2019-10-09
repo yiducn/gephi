@@ -248,9 +248,10 @@ public class VizBarController {
 
         @Override
         public JComponent getExtendedComponent() {
-            NodeSettingsPanel panel = new NodeSettingsPanel();
-            panel.setup();
-            return panel;
+//            NodeSettingsPanel panel = new NodeSettingsPanel();
+//            panel.setup();
+//            return panel;
+            return null;
         }
 
         @Override
@@ -332,7 +333,6 @@ public class VizBarController {
                 }
             });
             components[1] = edgeHasNodeColorButton;
-
 
             //Show labels buttons
             final JToggleButton showLabelsButton = new JToggleButton();

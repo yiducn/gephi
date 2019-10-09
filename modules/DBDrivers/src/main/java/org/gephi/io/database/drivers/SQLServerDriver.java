@@ -1,13 +1,13 @@
 /*
-Copyright 2008-2010 Gephi
-Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
+Copyright 2008-2017 Gephi
+Authors : Mathieu Bastian <mathieu.bastian@gephi.org> Eduardo Ramos <eduardo.ramos@gephi.org>
 Website : http://www.gephi.org
 
 This file is part of Gephi.
 
 DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+Copyright 2017 Gephi Consortium. All rights reserved.
 
 The contents of this file are subject to the terms of either the GNU
 General Public License Version 3 only ("GPL") or the Common
@@ -37,19 +37,31 @@ made subject to such option by the copyright holder.
 
 Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
+Portions Copyrighted 2017 Gephi Consortium.
  */
 package org.gephi.io.database.drivers;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  *
  * @author Mathieu Bastian
  */
+@ServiceProvider(service = SQLDriver.class, position = 40)
 public class SQLServerDriver implements SQLDriver {
+    
+    public SQLServerDriver() {
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(MySQLDriver.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     @Override
     public Connection getConnection(String connectionUrl, String username, String passwd) throws SQLException {

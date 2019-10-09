@@ -47,16 +47,13 @@ import org.jfree.chart.JFreeChart;
 
 /**
  * UI for showing a JFreeChart with the advantages of ChartPanel and also allows to resize the chart up to a maximum dimension.
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class JFreeChartDialog extends javax.swing.JDialog {
 
     private ChartPanel chartPanel;
     private static final int MAX_DIMENSION=3000;
 
-    /**
-     * Chart can't be null.
-     */
     public JFreeChartDialog(java.awt.Frame parent, String title, JFreeChart chart, int initialWidth, int initialHeight) {
         super(parent, false);
         setTitle(title);
@@ -65,9 +62,6 @@ public class JFreeChartDialog extends javax.swing.JDialog {
         setLocationRelativeTo(parent);
     }
 
-    /**
-     * Chart can't be null.
-     */
     public JFreeChartDialog(java.awt.Frame parent, JFreeChart chart) {
         super(parent, false);
         initialize(chart);
@@ -145,6 +139,7 @@ public class JFreeChartDialog extends javax.swing.JDialog {
 
         closeButton.setText(org.openide.util.NbBundle.getMessage(JFreeChartDialog.class, "JFreeChartDialog.closeButton.text")); // NOI18N
         closeButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 closeButtonActionPerformed(evt);
             }
@@ -153,6 +148,7 @@ public class JFreeChartDialog extends javax.swing.JDialog {
         resetButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/ui/components/resources/magnifier-history.png"))); // NOI18N
         resetButton.setText(org.openide.util.NbBundle.getMessage(JFreeChartDialog.class, "JFreeChartDialog.resetButton.text")); // NOI18N
         resetButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 resetButtonActionPerformed(evt);
             }
@@ -161,6 +157,7 @@ public class JFreeChartDialog extends javax.swing.JDialog {
         zoomOutButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/ui/components/resources/magnifier--minus.png"))); // NOI18N
         zoomOutButton.setText(org.openide.util.NbBundle.getMessage(JFreeChartDialog.class, "JFreeChartDialog.zoomOutButton.text")); // NOI18N
         zoomOutButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 zoomOutButtonActionPerformed(evt);
             }
@@ -169,6 +166,7 @@ public class JFreeChartDialog extends javax.swing.JDialog {
         zoomInButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/ui/components/resources/magnifier--plus.png"))); // NOI18N
         zoomInButton.setText(org.openide.util.NbBundle.getMessage(JFreeChartDialog.class, "JFreeChartDialog.zoomInButton.text")); // NOI18N
         zoomInButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 zoomInButtonActionPerformed(evt);
             }

@@ -18,17 +18,21 @@ package org.gephi.utils;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
 
 /**
- * <p>Utility class to guess the encoding of a given text file.</p>
- *
- * <p>Unicode files encoded in UTF-16 (low or big endian) or UTF-8 files
+ * Utility class to guess the encoding of a given text file.
+ * <p>
+ * Unicode files encoded in UTF-16 (low or big endian) or UTF-8 files
  * with a Byte Order Marker are correctly discovered. For UTF-8 files with no BOM, if the buffer
- * is wide enough, the charset should also be discovered.</p>
- *
- * <p>A byte buffer of 4KB is usually sufficient to be able to guess the encoding.</p>
- *
- * <p>Usage:</p>
+ * is wide enough, the charset should also be discovered.
+ * <p>
+ * A byte buffer of 4KB is usually sufficient to be able to guess the encoding.
+ * <p>
+ * Usage:
  * <pre>
  * // guess the encoding
  * Charset guessedCharset = CharsetToolkit.guessEncoding(file, 4096);
@@ -55,12 +59,13 @@ public class CharsetToolkit {
     private Charset defaultCharset;
     private Charset charset;
     private boolean enforce8Bit = true;
-    private PushbackInputStream input;
+    private final PushbackInputStream input;
 
     /**
      * Constructor of the <code>CharsetToolkit</code> utility class.
      *
-     * @param file of which we want to know the encoding.
+     * @param stream of which we want to know the encoding.
+     * @throws IOException if an io error occurs
      */
     public CharsetToolkit(InputStream stream) throws IOException {
         this.defaultCharset = getDefaultSystemCharset();
@@ -127,6 +132,8 @@ public class CharsetToolkit {
 
     /**
      * Retrieves the default Charset
+     * 
+     * @return charset
      */
     public Charset getDefaultCharset() {
         return defaultCharset;
@@ -134,7 +141,7 @@ public class CharsetToolkit {
 
     /**
      * <p>Guess the encoding of the provided buffer.</p>
-     * If Byte Order Markers are encountered at the beginning of the buffer, we immidiately
+     * <p>If Byte Order Markers are encountered at the beginning of the buffer, we immidiately
      * return the charset implied by this BOM. Otherwise, the file would not be a human
      * readable text file.</p>
      *
@@ -167,6 +174,23 @@ public class CharsetToolkit {
         }
         if (hasUTF16BEBom()) {
             return Charset.forName("UTF-16BE");
+        }
+        
+        if (hasXMLHeader()) {
+            try {
+                XMLStreamReader xmlStreamReader = XMLInputFactory.newInstance().createXMLStreamReader(new ByteArrayInputStream(buffer));
+                String encoding = xmlStreamReader.getCharacterEncodingScheme();
+
+                if (encoding != null) {
+                    Charset xmlCharset = Charset.forName(encoding.trim().toUpperCase());
+                    
+                    Logger.getLogger("").log(Level.INFO, "Detected encoding {0} in XML file", xmlCharset.name());
+                    return xmlCharset;
+                }
+            } catch (Exception ex) {
+                //Could not find charset, keep normal process
+                Logger.getLogger("").log(Level.WARNING, ex.getMessage());
+            }
         }
 
         // if a byte has its most significant bit set, the file is in UTF-8 or in the default encoding
@@ -381,7 +405,6 @@ public class CharsetToolkit {
      * method <code>guessEncoding()</code>.
      *
      * @return a <code>BufferedReader</code>
-     * @throws FileNotFoundException if the file is not found.
      */
     public BufferedReader getReader() {
         LineNumberReader reader = new LineNumberReader(new InputStreamReader(input, getCharset()));
@@ -405,5 +428,11 @@ public class CharsetToolkit {
     public static Charset[] getAvailableCharsets() {
         Collection collection = Charset.availableCharsets().values();
         return (Charset[]) collection.toArray(new Charset[collection.size()]);
+    }
+
+    private boolean hasXMLHeader() {
+        String header = new String(buffer, 0, Math.min(256, buffer.length)).toLowerCase();
+        
+        return header.contains("<?xml") && header.contains("encoding");
     }
 }

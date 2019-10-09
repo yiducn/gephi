@@ -41,15 +41,20 @@
  */
 package org.gephi.io.importer.api;
 
-import org.gephi.attribute.api.TimeFormat;
+import org.gephi.graph.api.Interval;
+import org.gephi.graph.api.TimeFormat;
+import org.gephi.graph.api.TimeRepresentation;
 import org.gephi.io.processor.spi.Processor;
+import org.joda.time.DateTimeZone;
 
 /**
- * Interface for unloading a container. Gets graph draft elements and
- * attributes. Get also basic params and properties which defined the content.
- * Unloaders are used by
- * <code>Processor</code> to load data from the container to the main data
- * structure.
+ * Interface for unloading a container.
+ * <p>
+ * Gives access to the draft graph elements, columns attributes. Also gives
+ * access to basic settings and properties about the container's content.
+ * <p>
+ * Unloaders are used by <code>Processor</code> to load data from the container
+ * to the main data structure.
  *
  * @author Mathieu Bastian
  * @see Processor
@@ -68,16 +73,43 @@ public interface ContainerUnloader {
 
     public boolean hasEdgeColumn(String key);
 
+    /**
+     * Returns the node column draft with <code>key</code> as identifier.
+     *
+     * @param key node column key
+     * @return column draft or null if not found
+     */
+    public ColumnDraft getNodeColumn(String key);
+
+    /**
+     * Returns the edge column draft with <code>key</code> as identifier.
+     *
+     * @param key edge column key
+     * @return column draft or null if not found
+     */
+    public ColumnDraft getEdgeColumn(String key);
+
     public Iterable<ColumnDraft> getNodeColumns();
 
     public Iterable<ColumnDraft> getEdgeColumns();
 
-//    public EdgeDraft getEdge(NodeDraft source, NodeDraft target);
     public EdgeDirectionDefault getEdgeDefault();
 
     public TimeFormat getTimeFormat();
 
+    public TimeRepresentation getTimeRepresentation();
+
+    public DateTimeZone getTimeZone();
+
     public String getSource();
+
+    public Class getEdgeTypeLabelClass();
+
+    public Double getTimestamp();
+
+    public Interval getInterval();
+
+    public ElementIdType getElementIdType();
 
     //PARAMETERS GETTERS
     public boolean allowSelfLoop();
@@ -87,6 +119,8 @@ public interface ContainerUnloader {
     public boolean allowParallelEdges();
 
     public boolean isAutoScale();
+    
+    public boolean isFillLabelWithId();
 
-    public EdgeWeightMergeStrategy getEdgesMergeStrategy();
+    public EdgeMergeStrategy getEdgesMergeStrategy();
 }

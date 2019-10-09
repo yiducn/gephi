@@ -41,12 +41,9 @@
  */
 package org.gephi.statistics.plugin;
 
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
-import org.gephi.attribute.api.Table;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.EdgeIterable;
@@ -54,7 +51,7 @@ import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
-import org.gephi.graph.api.NodeIterable;
+import org.gephi.graph.api.Table;
 import org.gephi.statistics.spi.Statistics;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
@@ -67,8 +64,7 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.openide.util.Lookup;
 
 /**
- * Ref: Jon M. Kleinberg, Authoritative Sources in a Hyperlinked Environment, in
- * Journal of the ACM 46 (5): 604–632 (1999)
+ * Ref: Jon M. Kleinberg, Authoritative Sources in a Hyperlinked Environment, in Journal of the ACM 46 (5): 604–632 (1999)
  *
  * @author pjmcswee
  */
@@ -103,60 +99,54 @@ public class Hits implements Statistics, LongTask {
     }
 
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
-        Graph graph = null;
+    public void execute(GraphModel graphModel) {
+        final Graph graph;
         if (useUndirected) {
             graph = graphModel.getUndirectedGraphVisible();
         } else {
             graph = graphModel.getDirectedGraphVisible();
         }
-        execute(graph, attributeModel);
+        execute(graph);
     }
 
-    public void execute(Graph hgraph, AttributeModel attributeModel) {
+    public void execute(Graph graph) {
 
-        initializeAttributeColunms(attributeModel);
+        initializeAttributeColunms(graph.getModel());
 
-        hgraph.readLock();
+        graph.readLock();
+        try {
+            int N = graph.getNodeCount();
+            authority = new double[N];
+            hubs = new double[N];
 
-        int N = hgraph.getNodeCount();
-        authority = new double[N];
-        hubs = new double[N];
+            Map<Node, Integer> indices = createIndicesMap(graph);
 
-        Map<Node, Integer> indicies = createIndiciesMap(hgraph);
+            calculateHits(graph, hubs, authority, indices, !useUndirected, epsilon);
 
-        calculateHits(hgraph, hubs, authority, indicies, !useUndirected, epsilon);
-
-        saveCalculatedValues(hgraph, authority, hubs);
-
-        hgraph.readUnlockAll();
+            saveCalculatedValues(indices, authority, hubs);
+        } finally {
+            graph.readUnlockAll();
+        }
     }
 
-    public void calculateHits(Graph hgraph, double[] hubValues, double[] authorityValues, Map<Node, Integer> indicies, boolean isDirected, double eps) {
+    public void calculateHits(Graph graph, double[] hubValues, double[] authorityValues, Map<Node, Integer> indices, boolean isDirected, double eps) {
 
-        int N = hgraph.getNodeCount();
+        int N = graph.getNodeCount();
 
         double[] temp_authority = new double[N];
         double[] temp_hubs = new double[N];
 
         initializeStartValues(hubValues, authorityValues);
-        
+
         Progress.start(progress);
 
         while (true) {
-
-            boolean done = true;
-
-            updateAutorithy(hgraph, temp_authority, hubValues, isDirected, indicies);
-            updateHub(hgraph, temp_hubs, temp_authority, isDirected, indicies);
-
-            done = checkDiff(authorityValues, temp_authority, eps) && checkDiff(hubValues, temp_hubs, eps);
+            updateAutorithy(graph, temp_authority, hubValues, isDirected, indices);
+            updateHub(graph, temp_hubs, temp_authority, isDirected, indices);
+            boolean done = checkDiff(authorityValues, temp_authority, eps) && checkDiff(hubValues, temp_hubs, eps);
 
             System.arraycopy(temp_authority, 0, authorityValues, 0, N);
             System.arraycopy(temp_hubs, 0, hubValues, 0, N);
-
-//            temp_authority = new double[N];
-//            temp_hubs = new double[N]
 
             if ((done) || (isCanceled)) {
                 break;
@@ -164,8 +154,8 @@ public class Hits implements Statistics, LongTask {
         }
     }
 
-    private void initializeAttributeColunms(AttributeModel attributeModel) {
-        Table nodeTable = attributeModel.getNodeTable();
+    private void initializeAttributeColunms(GraphModel graphModel) {
+        Table nodeTable = graphModel.getNodeTable();
 
         if (!nodeTable.hasColumn(AUTHORITY)) {
             nodeTable.addColumn(AUTHORITY, "Authority", Float.class, new Float(0));
@@ -176,36 +166,35 @@ public class Hits implements Statistics, LongTask {
     }
 
     private void initializeStartValues(double[] hubValues, double[] authorityValues) {
-        for (int i = 0; i < authorityValues.length; i++) {
-            authorityValues[i] = 1.0;
-            hubValues[i] = 1.0;
-        }
+        Arrays.fill(authorityValues, 1.0);
+        Arrays.fill(hubValues, 1.0);
     }
 
-    void updateAutorithy(Graph hgraph, double[] newValues, double[] hubValues, boolean isDirected, Map<Node, Integer> indicies) {
+    void updateAutorithy(Graph graph, double[] newValues, double[] hubValues, boolean isDirected, Map<Node, Integer> indices) {
         double norm = 0;
-        int j = 0;
-        for (Node node : hgraph.getNodes()) {
+        for (Node q : indices.keySet()) {
             double auth = 0;
             EdgeIterable edge_iter;
             if (isDirected) {
-                edge_iter = ((DirectedGraph) hgraph).getInEdges(node);
+                edge_iter = ((DirectedGraph) graph).getInEdges(q);
             } else {
-                edge_iter = hgraph.getEdges(node);
+                edge_iter = graph.getEdges(q);
             }
             for (Edge edge : edge_iter) {
-                Node target = hgraph.getOpposite(node, edge);
-                auth += hubValues[indicies.get(target)];
+                if (!edge.isSelfLoop()) {
+                    Node p = graph.getOpposite(q, edge);
+                    auth += hubValues[indices.get(p)];
+                }
             }
-            if (auth > 0) {
-                newValues[j] = auth;
-            }
-            norm += newValues[j++];
+
+            newValues[indices.get(q)] = auth;
+
+            norm += auth * auth;
             if (isCanceled) {
                 return;
             }
         }
-//        norm = Math.sqrt(norm);
+        norm = Math.sqrt(norm);
         if (norm > 0) {
             for (int i = 0; i < newValues.length; i++) {
                 newValues[i] = newValues[i] / norm;
@@ -213,29 +202,31 @@ public class Hits implements Statistics, LongTask {
         }
     }
 
-    void updateHub(Graph hgraph, double[] newValues, double[] authValues, boolean isDirected, Map<Node, Integer> indicies) {
+    void updateHub(Graph graph, double[] newValues, double[] authValues, boolean isDirected, Map<Node, Integer> indices) {
         double norm = 0;
-        int j = 0;
-        for (Node node : hgraph.getNodes()) {
+        for (Node p : indices.keySet()) {
             double hub = 0;
             EdgeIterable edge_iter;
             if (isDirected) {
-                edge_iter = ((DirectedGraph) hgraph).getOutEdges(node);
+                edge_iter = ((DirectedGraph) graph).getOutEdges(p);
             } else {
-                edge_iter = hgraph.getEdges(node);
+                edge_iter = graph.getEdges(p);
             }
             for (Edge edge : edge_iter) {
-                Node target = hgraph.getOpposite(node, edge);
-                hub += authValues[indicies.get(target)];
+                if (!edge.isSelfLoop()) {
+                    Node r = graph.getOpposite(p, edge);
+                    hub += authValues[indices.get(r)];
+                }
             }
-            if(hub > 0) {
-                newValues[j] = hub;
-            }
-            norm += newValues[j++];
+
+            newValues[indices.get(p)] = hub;
+
+            norm += hub * hub;
             if (isCanceled) {
                 return;
             }
         }
+        norm = Math.sqrt(norm);
         if (norm > 0) {
             for (int i = 0; i < newValues.length; i++) {
                 newValues[i] = newValues[i] / norm;
@@ -244,33 +235,31 @@ public class Hits implements Statistics, LongTask {
     }
 
     private boolean checkDiff(double[] oldValues, double[] newValues, double epsilon) {
-
         for (int i = 0; i < oldValues.length; i++) {
-            if (oldValues[i] > 0 && ((newValues[i] - oldValues[i]) / oldValues[i]) >= epsilon) {
+            if (oldValues[i] > 0 && Math.abs((newValues[i] - oldValues[i]) / oldValues[i]) >= epsilon) {
                 return false;
             }
         }
         return true;
     }
 
-    private void saveCalculatedValues(Graph hgraph, double[] nodeAuthority, double[] nodeHubs) {
-        int i = 0;
-        for (Node s : hgraph.getNodes()) {
-            int s_index = i++;
+    private void saveCalculatedValues(Map<Node, Integer> indices, double[] nodeAuthority, double[] nodeHubs) {
+        for (Node n : indices.keySet()) {
+            int index = indices.get(n);
 
-            s.setAttribute(AUTHORITY, (float) nodeAuthority[s_index]);
-            s.setAttribute(HUB, (float) nodeHubs[s_index]);
+            n.setAttribute(AUTHORITY, (float) nodeAuthority[index]);
+            n.setAttribute(HUB, (float) nodeHubs[index]);
         }
     }
 
-    public HashMap<Node, Integer> createIndiciesMap(Graph hgraph) {
-        HashMap<Node, Integer> newIndicies = new HashMap<Node, Integer>();
+    public HashMap<Node, Integer> createIndicesMap(Graph graph) {
+        HashMap<Node, Integer> newIndices = new HashMap<>();
         int index = 0;
-        for (Node s : hgraph.getNodes()) {
-            newIndicies.put(s, index);
+        for (Node s : graph.getNodes()) {
+            newIndices.put(s, index);
             index++;
         }
-        return newIndicies;
+        return newIndices;
     }
 
     /**
@@ -280,7 +269,7 @@ public class Hits implements Statistics, LongTask {
     @Override
     public String getReport() {
         //distribution of hub values
-        Map<Double, Integer> distHubs = new HashMap<Double, Integer>();
+        Map<Double, Integer> distHubs = new HashMap<>();
         for (int i = 0; i < hubs.length; i++) {
             Double d = hubs[i];
             if (distHubs.containsKey(d)) {
@@ -292,7 +281,7 @@ public class Hits implements Statistics, LongTask {
         }
 
         //distribution of authority values
-        Map<Double, Integer> distAuthorities = new HashMap<Double, Integer>();
+        Map<Double, Integer> distAuthorities = new HashMap<>();
         for (int i = 0; i < authority.length; i++) {
             Double d = authority[i];
             if (distAuthorities.containsKey(d)) {

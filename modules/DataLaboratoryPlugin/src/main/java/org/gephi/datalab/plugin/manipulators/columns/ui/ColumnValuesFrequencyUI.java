@@ -43,12 +43,13 @@ package org.gephi.datalab.plugin.manipulators.columns.ui;
 
 import java.util.Map;
 import javax.swing.JPanel;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.datalab.plugin.manipulators.columns.ColumnValuesFrequency;
 import org.gephi.datalab.spi.DialogControls;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulator;
 import org.gephi.datalab.spi.columns.AttributeColumnsManipulatorUI;
+import org.gephi.graph.api.Column;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.Table;
 import org.gephi.ui.components.JFreeChartDialog;
 import org.gephi.ui.components.SimpleHTMLReport;
 import org.jfree.chart.JFreeChart;
@@ -56,13 +57,13 @@ import org.openide.windows.WindowManager;
 
 /**
  * UI for ColumnValuesFrequency AttributeColumnsManipulator.
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements AttributeColumnsManipulatorUI {
 
     private ColumnValuesFrequency manipulator;
-    private AttributeTable table;
-    private AttributeColumn column;
+    private Table table;
+    private Column column;
     private Map<Object, Integer> valuesFrequencies;
     private JFreeChart pieChart;
     private JFreeChartDialog pieChartDialog;
@@ -73,7 +74,8 @@ public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements Attri
         initComponents();
     }
 
-    public void setup(AttributeColumnsManipulator m, AttributeTable table, AttributeColumn column, DialogControls dialogControls) {
+    @Override
+    public void setup(AttributeColumnsManipulator m, GraphModel graphModel, Table table, Column column, DialogControls dialogControls) {
         this.table = table;
         this.column = column;
         this.manipulator = (ColumnValuesFrequency) m;
@@ -82,6 +84,7 @@ public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements Attri
         configurePieChartButton.setEnabled(valuesFrequencies.size()<=ColumnValuesFrequency.MAX_PIE_CHART_CATEGORIES);
     }
 
+    @Override
     public void unSetup() {
         if (reportDialog != null) {
             reportDialog.dispose();
@@ -91,14 +94,17 @@ public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements Attri
         }
     }
 
+    @Override
     public String getDisplayName() {
         return manipulator.getName();
     }
 
+    @Override
     public JPanel getSettingsPanel() {
         return this;
     }
 
+    @Override
     public boolean isModal() {
         return false;
     }
@@ -118,6 +124,7 @@ public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements Attri
         configurePieChartButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/category.png"))); // NOI18N
         configurePieChartButton.setText(org.openide.util.NbBundle.getMessage(ColumnValuesFrequencyUI.class, "ColumnValuesFrequencyUI.configurePieChartButton.text")); // NOI18N
         configurePieChartButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 configurePieChartButtonActionPerformed(evt);
             }
@@ -126,6 +133,7 @@ public class ColumnValuesFrequencyUI extends javax.swing.JPanel implements Attri
         showReportButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/datalab/plugin/manipulators/resources/application-block.png"))); // NOI18N
         showReportButton.setText(org.openide.util.NbBundle.getMessage(ColumnValuesFrequencyUI.class, "ColumnValuesFrequencyUI.showReportButton.text")); // NOI18N
         showReportButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 showReportButtonActionPerformed(evt);
             }

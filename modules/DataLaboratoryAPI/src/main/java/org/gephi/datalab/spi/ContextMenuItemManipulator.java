@@ -48,7 +48,7 @@ import org.gephi.datalab.spi.nodes.NodesManipulator;
 /**
  * <p>This interface defines a common extension for the manipulators that appear as context menu items
  * such as NodesManipulator, EdgesManipulator and GraphContextMenuItem (from Visualization API)</p>
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  * @see NodesManipulator
  */
 public interface ContextMenuItemManipulator extends Manipulator {
@@ -61,7 +61,7 @@ public interface ContextMenuItemManipulator extends Manipulator {
      * must return the subitem(s) with the mnemonic even when it has not been setup.
      * If you don't need a mnemonic, return null if the item is not setup.</p>
      * <p>Returned items have to be of the same type as the subinterface (NodesManipulator for example)</p>
-     * @return
+     * @return sub items
      */
     ContextMenuItemManipulator[] getSubItems();
 

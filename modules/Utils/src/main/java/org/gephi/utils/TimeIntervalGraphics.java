@@ -47,11 +47,13 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 /**
- * <p>Class to draw time intervals as graphics, being able to indicate the colors to use (or default colors). The result graphics are like:</p>
+ * Class to draw time intervals as graphics, being able to indicate the colors
+ * to use (or default colors). 
+ * <p>
+ * The result graphics are like:
+ * |{background color}|time-interval{fill color}|{background color}|
  *
- * <p>|{background color}|time-interval{fill color}|{background color}|</p>
- *
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ * @author Eduardo Ramos
  */
 public class TimeIntervalGraphics {
 
@@ -62,7 +64,8 @@ public class TimeIntervalGraphics {
     private double range;
 
     /**
-     * Create a new TimeIntervalGraphics with the given minimum and maximum times to render intervals later.
+     * Create a new TimeIntervalGraphics with the given minimum and maximum
+     * times to render intervals later.
      *
      * @param min Minimum time of all intervals
      * @param max Maximum time of all intervals
@@ -83,10 +86,14 @@ public class TimeIntervalGraphics {
     }
 
     /**
-     * Creates a time interval graphic representation with default colors. If starts or ends are infinite, they will be normalized to the min or max values range.
+     * Creates a time interval graphic representation with default colors. If
+     * starts or ends are infinite, they will be normalized to the min or max
+     * values range.
      *
-     * @param start Start of the interval (must be greater or equal than minimum time)
-     * @param end End of the interval (must be lesser or equal than maximum time)
+     * @param start Start of the interval (must be greater or equal than minimum
+     * time)
+     * @param end End of the interval (must be lesser or equal than maximum
+     * time)
      * @param width Image width
      * @param height Image height
      * @return Generated image for the interval
@@ -96,11 +103,14 @@ public class TimeIntervalGraphics {
     }
 
     /**
-     * Creates a time interval graphic representation with the indicated fill and border colors (or null to use default colors). If starts or ends are infinite, they will be normalized to the min or
-     * max values range.
+     * Creates a time interval graphic representation with the indicated fill
+     * and border colors (or null to use default colors). If starts or ends are
+     * infinite, they will be normalized to the min or max values range.
      *
-     * @param start Start of the interval (must be greater or equal than minimum time)
-     * @param end End of the interval (must be lesser or equal than maximum time)
+     * @param start Start of the interval (must be greater or equal than minimum
+     * time)
+     * @param end End of the interval (must be lesser or equal than maximum
+     * time)
      * @param width Image width
      * @param height Image height
      * @param fill Fill color for the interval
@@ -112,11 +122,14 @@ public class TimeIntervalGraphics {
     }
 
     /**
-     * Creates a time interval graphic representation with the indicated fill and border colors (or null to use default colors). If starts or ends are infinite, they will be normalized to the min or
-     * max values range.
+     * Creates a time interval graphic representation with the indicated fill
+     * and border colors (or null to use default colors). If starts or ends are
+     * infinite, they will be normalized to the min or max values range.
      *
-     * @param start Start of the interval (must be greater or equal than minimum time)
-     * @param end End of the interval (must be lesser or equal than maximum time)
+     * @param start Start of the interval (must be greater or equal than minimum
+     * time)
+     * @param end End of the interval (must be lesser or equal than maximum
+     * time)
      * @param width Image width
      * @param height Image height
      * @param fill Fill color for the interval
@@ -132,11 +145,15 @@ public class TimeIntervalGraphics {
     }
 
     /**
-     * Creates a time interval graphic representation with the indicated fill, border and background colors (or null to use default colors). If starts or ends are infinite, they will be normalized to
-     * the min or max values range.
+     * Creates a time interval graphic representation with the indicated fill,
+     * border and background colors (or null to use default colors). If starts
+     * or ends are infinite, they will be normalized to the min or max values
+     * range.
      *
-     * @param starts Starts of the intervals (must be greater or equal than minimum time)
-     * @param ends Ends of the intervals (must be lesser or equal than maximum time)
+     * @param starts Starts of the intervals (must be greater or equal than
+     * minimum time)
+     * @param ends Ends of the intervals (must be lesser or equal than maximum
+     * time)
      * @param width Image width
      * @param height Image height
      * @param fill Fill color for the interval
@@ -169,7 +186,6 @@ public class TimeIntervalGraphics {
         g.translate(1, 0);//Start drawing at pixel 1
 
         width -= 2;//Reduce fill area in 2 pixels for the borders
-        double xTickWidth = (double) width / range;
 
         //Draw time interval filled parts:
         if (range == 0) {//No range, Min=Max
@@ -181,6 +197,8 @@ public class TimeIntervalGraphics {
             g.drawLine(-1, 0, -1, height);
             g.drawLine(width, 0, width, height);
         } else {
+            double xTickWidth = (double) width / range;
+            
             int startPixel, endPixel;
             for (int i = 0; i < starts.length; i++) {
                 g.setColor(fill);
@@ -247,5 +265,17 @@ public class TimeIntervalGraphics {
             return max;
         }
         return d;
+    }
+
+    public void setMinMax(double min, double max) {
+        min = normalize(min);
+        max = normalize(max);
+        if (max < min) {
+            throw new IllegalArgumentException("min should be less or equal than max");
+        }
+        this.min = min;
+        this.max = max;
+        
+        calculateRange();
     }
 }

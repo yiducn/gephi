@@ -42,8 +42,10 @@
 package org.gephi.algorithms.shortestpath;
 
 import java.util.HashMap;
+import java.util.Map;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.EdgeIterable;
 import org.gephi.graph.api.Node;
 
 /**
@@ -58,71 +60,54 @@ public class BellmanFordShortestPathAlgorithm extends AbstractShortestPathAlgori
     public BellmanFordShortestPathAlgorithm(DirectedGraph graph, Node sourceNode) {
         super(sourceNode);
         this.graph = graph;
-        predecessors = new HashMap<Node, Edge>();
+        predecessors = new HashMap<>();
     }
 
     @Override
     public void compute() {
 
         graph.readLock();
+        try {
+            //Initialize
+            int nodeCount = 0;
+            for (Node node : graph.getNodes()) {
+                distances.put(node, Double.POSITIVE_INFINITY);
+                nodeCount++;
+            }
+            distances.put(sourceNode, 0d);
 
-        //Initialize
-        int nodeCount = 0;
-        for (Node node : graph.getNodes()) {
-            distances.put(node, Double.POSITIVE_INFINITY);
-            nodeCount++;
-        }
-        distances.put(sourceNode, 0d);
+            //Relax edges repeatedly
+            for (int i = 0; i < nodeCount; i++) {
 
-
-        //Relax edges repeatedly
-        for (int i = 0; i < nodeCount; i++) {
-
-            boolean relaxed = false;
-            for (Edge edge : graph.getEdges()) {
-                Node target = edge.getTarget();
-                if (relax(edge)) {
-                    relaxed = true;
-                    predecessors.put(target, edge);
+                boolean relaxed = false;
+                for (Edge edge : graph.getEdges()) {
+                    Node target = edge.getTarget();
+                    if (relax(edge)) {
+                        relaxed = true;
+                        predecessors.put(target, edge);
+                    }
+                }
+                if (!relaxed) {
+                    break;
                 }
             }
-            if (!relaxed) {
-                break;
+
+            //Check for negative-weight cycles
+            EdgeIterable edgesIterable = graph.getEdges();
+            for (Edge edge : edgesIterable) {
+                if (distances.get(edge.getSource()) + edgeWeight(edge) < distances.get(edge.getTarget())) {
+                    edgesIterable.doBreak();
+                    throw new RuntimeException("The Graph contains a negative-weighted cycle");
+                }
             }
+        } finally {
+            graph.readUnlockAll();
         }
-
-        //Check for negative-weight cycles
-        for (Edge edge : graph.getEdges()) {
-
-            if (distances.get(edge.getSource()) + edgeWeight(edge) < distances.get(edge.getTarget())) {
-                graph.readUnlock();
-                throw new RuntimeException("The Graph contains a negative-weighted cycle");
-            }
-        }
-
-        graph.readUnlock();
     }
 
     @Override
-    protected double edgeWeight(Edge edge) {
-        return edge.getWeight();
+    public Map<Node, Edge> getPredecessors() {
+        return predecessors;
     }
 
-    @Override
-    public Node getPredecessor(Node node) {
-        Edge edge = predecessors.get(node);
-        if (edge != null) {
-            if (edge.getSource() != node) {
-                return edge.getSource();
-            } else {
-                return edge.getTarget();
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public Edge getPredecessorIncoming(Node node) {
-        return predecessors.get(node);
-    }
 }

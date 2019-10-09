@@ -42,29 +42,33 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.datalab.plugin.manipulators.general.ui;
 
 import java.awt.Color;
+import java.awt.event.KeyEvent;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.JOptionPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeController;
-import org.gephi.data.attributes.api.AttributeTable;
-import org.gephi.datalab.api.datatables.DataTablesController;
 import org.gephi.datalab.api.SearchReplaceController;
 import org.gephi.datalab.api.SearchReplaceController.SearchOptions;
 import org.gephi.datalab.api.SearchReplaceController.SearchResult;
+import org.gephi.datalab.api.datatables.DataTablesController;
+import org.gephi.graph.api.AttributeUtils;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.Table;
+import org.gephi.graph.api.TimeFormat;
 import org.gephi.utils.HTMLEscape;
+import org.joda.time.DateTimeZone;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Special UI for SearchReplace GeneralActionsManipulator
- * @author Eduardo Ramos <eduramiba@gmail.com>
+ *
+ * @author Eduardo Ramos
  */
 @ServiceProvider(service = SearchReplaceUI.class)
 public final class SearchReplaceUI extends javax.swing.JPanel {
@@ -83,7 +87,9 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
     private Pattern regexPattern;
     private boolean active = false;
 
-    /** Creates new form SearchReplaceUI */
+    /**
+     * Creates new form SearchReplaceUI
+     */
     public SearchReplaceUI() {
         initComponents();
 
@@ -94,14 +100,17 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         searchText.getDocument().addDocumentListener(new DocumentListener() {
 
+            @Override
             public void insertUpdate(DocumentEvent e) {
                 refreshSearchOptions();
             }
 
+            @Override
             public void removeUpdate(DocumentEvent e) {
                 refreshSearchOptions();
             }
 
+            @Override
             public void changedUpdate(DocumentEvent e) {
                 refreshSearchOptions();
             }
@@ -135,32 +144,32 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         boolean onlyVisibleElements = Lookup.getDefault().lookup(DataTablesController.class).isShowOnlyVisible();
         searchResult = null;
         columnsToSearchComboBox.removeAllItems();
-        AttributeTable table;
+        Table table;
         if (mode == Mode.NODES_TABLE) {
             Node[] nodes;
             if (onlyVisibleElements) {
                 //Search on visible nodes:
-                nodes = Lookup.getDefault().lookup(GraphController.class).getModel().getHierarchicalGraphVisible().getNodesTree().toArray();
+                nodes = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getGraphVisible().getNodes().toArray();
             } else {
                 nodes = new Node[0];//Search on all nodes
             }
             searchOptions = new SearchOptions(nodes, null);
-            table = Lookup.getDefault().lookup(AttributeController.class).getModel().getNodeTable();
+            table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getNodeTable();
         } else {
             Edge[] edges;
             if (onlyVisibleElements) {
                 //Search on visible edges:
-                edges = Lookup.getDefault().lookup(GraphController.class).getModel().getHierarchicalGraphVisible().getEdges().toArray();
+                edges = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getGraphVisible().getEdges().toArray();
             } else {
                 edges = new Edge[0];//Search on all edges
             }
             searchOptions = new SearchOptions(edges, null);
-            table = Lookup.getDefault().lookup(AttributeController.class).getModel().getEdgeTable();
+            table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getEdgeTable();
         }
 
         //Fill possible columns to search (first value is all columns):
         columnsToSearchComboBox.addItem(NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.allColumns"));
-        for (AttributeColumn c : table.getColumns()) {
+        for (Column c : table) {
             columnsToSearchComboBox.addItem(new ColumnWrapper(c));
         }
     }
@@ -210,6 +219,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
     private void showSearchResult() {
         if (searchResult != null) {
+            Table table;
             Object value;
             if (mode == Mode.NODES_TABLE) {
                 Node node = searchResult.getFoundNode();
@@ -217,21 +227,27 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
                 if (!dataTablesController.isNodeTableMode()) {
                     dataTablesController.selectNodesTable();
                 }
-                value = node.getNodeData().getAttributes().getValue(searchResult.getFoundColumnIndex());
+
+                table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getNodeTable();
+                value = node.getAttribute(table.getColumn(searchResult.getFoundColumnIndex()));
             } else {
                 Edge edge = searchResult.getFoundEdge();
                 dataTablesController.setEdgeTableSelection(new Edge[]{edge});
                 if (!dataTablesController.isEdgeTableMode()) {
                     dataTablesController.selectEdgesTable();
                 }
-                value = edge.getEdgeData().getAttributes().getValue(searchResult.getFoundColumnIndex());
+                table = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getEdgeTable();
+                value = edge.getAttribute(table.getColumn(searchResult.getFoundColumnIndex()));
             }
+
+            TimeFormat timeFormat = table.getGraph().getModel().getTimeFormat();
+            DateTimeZone timeZone = table.getGraph().getModel().getTimeZone();
 
             String columnName;
             if (mode == Mode.NODES_TABLE) {
-                columnName = Lookup.getDefault().lookup(AttributeController.class).getModel().getNodeTable().getColumn(searchResult.getFoundColumnIndex()).getTitle();
+                columnName = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getNodeTable().getColumn(searchResult.getFoundColumnIndex()).getTitle();
             } else {
-                columnName = Lookup.getDefault().lookup(AttributeController.class).getModel().getEdgeTable().getColumn(searchResult.getFoundColumnIndex()).getTitle();
+                columnName = Lookup.getDefault().lookup(GraphController.class).getGraphModel().getEdgeTable().getColumn(searchResult.getFoundColumnIndex()).getTitle();
             }
 
             StringBuilder sb = new StringBuilder();
@@ -239,7 +255,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
             sb.append(NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.column", HTMLEscape.stringToHTMLString(columnName)));
             sb.append("<br>");
             if (value != null) {
-                String text = value.toString();
+                String text = AttributeUtils.print(value, timeFormat, timeZone);
                 sb.append(HTMLEscape.stringToHTMLString(text.substring(0, searchResult.getStart())));
                 sb.append("<font color='blue'>");
                 sb.append(HTMLEscape.stringToHTMLString(text.substring(searchResult.getStart(), searchResult.getEnd())));
@@ -256,6 +272,12 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         }
     }
 
+    private void nextResult() {
+        searchResult = searchReplaceController.findNext(searchOptions);
+        refreshSearchOptions();
+        showSearchResult();
+    }
+
     private void showRegexReplaceError() {
         JOptionPane.showMessageDialog(null, NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.regexReplacementError"), NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.dialog.title.error"), JOptionPane.ERROR_MESSAGE);
     }
@@ -270,9 +292,9 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
     class ColumnWrapper {
 
-        AttributeColumn column;
+        Column column;
 
-        public ColumnWrapper(AttributeColumn column) {
+        public ColumnWrapper(Column column) {
             this.column = column;
         }
 
@@ -282,10 +304,8 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         }
     }
 
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+    /**
+     * This method is called from within the constructor to initialize the form. WARNING: Do NOT modify this code. The content of this method is always regenerated by the Form Editor.
      */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -317,6 +337,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         matchWholeValueCheckBox.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.matchWholeValueCheckBox.text")); // NOI18N
         matchWholeValueCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 matchWholeValueCheckBoxItemStateChanged(evt);
             }
@@ -326,6 +347,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         normalSearchModeRadioButton.setSelected(true);
         normalSearchModeRadioButton.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.normalSearchModeRadioButton.text")); // NOI18N
         normalSearchModeRadioButton.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 normalSearchModeRadioButtonItemStateChanged(evt);
             }
@@ -334,6 +356,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         searchModeButtonGroup.add(regexSearchModeRadioButton);
         regexSearchModeRadioButton.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.regexSearchModeRadioButton.text")); // NOI18N
         regexSearchModeRadioButton.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 regexSearchModeRadioButtonItemStateChanged(evt);
             }
@@ -341,6 +364,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         caseSensitiveCheckBox.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.caseSensitiveCheckBox.text")); // NOI18N
         caseSensitiveCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 caseSensitiveCheckBoxItemStateChanged(evt);
             }
@@ -348,6 +372,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         findNextButton.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.findNextButton.text")); // NOI18N
         findNextButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 findNextButtonActionPerformed(evt);
             }
@@ -355,6 +380,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         replaceButton.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.replaceButton.text")); // NOI18N
         replaceButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 replaceButtonActionPerformed(evt);
             }
@@ -362,12 +388,19 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         replaceAllButton.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.replaceAllButton.text")); // NOI18N
         replaceAllButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 replaceAllButtonActionPerformed(evt);
             }
         });
 
         searchText.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.searchText.text")); // NOI18N
+        searchText.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                searchTextKeyPressed(evt);
+            }
+        });
 
         replaceText.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.replaceText.text")); // NOI18N
 
@@ -379,6 +412,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
 
         regexReplaceCheckBox.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.regexReplaceCheckBox.text")); // NOI18N
         regexReplaceCheckBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 regexReplaceCheckBoxItemStateChanged(evt);
             }
@@ -387,6 +421,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         columnsToSearchLabel.setText(org.openide.util.NbBundle.getMessage(SearchReplaceUI.class, "SearchReplaceUI.columnsToSearchLabel.text")); // NOI18N
 
         columnsToSearchComboBox.addItemListener(new java.awt.event.ItemListener() {
+            @Override
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 columnsToSearchComboBoxItemStateChanged(evt);
             }
@@ -396,6 +431,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jSeparator1, javax.swing.GroupLayout.DEFAULT_SIZE, 379, Short.MAX_VALUE)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -425,14 +461,11 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
                             .addComponent(replaceButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(findNextButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addComponent(scroll, javax.swing.GroupLayout.DEFAULT_SIZE, 359, Short.MAX_VALUE)
-                    .addComponent(resultLabel))
-                .addContainerGap())
-            .addComponent(jSeparator1, javax.swing.GroupLayout.DEFAULT_SIZE, 379, Short.MAX_VALUE)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(columnsToSearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(columnsToSearchComboBox, 0, 185, Short.MAX_VALUE)
+                    .addComponent(resultLabel)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(columnsToSearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(columnsToSearchComboBox, 0, 185, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -495,9 +528,7 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
     }//GEN-LAST:event_caseSensitiveCheckBoxItemStateChanged
 
     private void findNextButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_findNextButtonActionPerformed
-        searchResult = searchReplaceController.findNext(searchOptions);
-        refreshSearchOptions();
-        showSearchResult();
+        nextResult();
     }//GEN-LAST:event_findNextButtonActionPerformed
 
     private void replaceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_replaceButtonActionPerformed
@@ -531,6 +562,13 @@ public final class SearchReplaceUI extends javax.swing.JPanel {
     private void columnsToSearchComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_columnsToSearchComboBoxItemStateChanged
         refreshSearchOptions();
     }//GEN-LAST:event_columnsToSearchComboBoxItemStateChanged
+
+    private void searchTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_searchTextKeyPressed
+        if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
+            nextResult();
+        }
+    }//GEN-LAST:event_searchTextKeyPressed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox caseSensitiveCheckBox;
     private javax.swing.JComboBox columnsToSearchComboBox;

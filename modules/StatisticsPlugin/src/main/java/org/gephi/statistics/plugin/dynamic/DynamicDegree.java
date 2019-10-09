@@ -45,18 +45,18 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
-import org.gephi.attribute.api.Table;
-import org.gephi.attribute.time.Interval;
-import org.gephi.attribute.time.TimestampDoubleSet;
-import org.gephi.attribute.time.TimestampIntegerSet;
+import org.gephi.graph.api.Column;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.Interval;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.Table;
+import org.gephi.graph.api.TimeRepresentation;
+import org.gephi.graph.api.types.IntervalIntegerMap;
+import org.gephi.graph.api.types.TimestampIntegerMap;
 import org.gephi.statistics.plugin.ChartUtils;
 import org.gephi.statistics.spi.DynamicStatistics;
 import org.gephi.utils.longtask.spi.LongTask;
@@ -102,27 +102,29 @@ public class DynamicDegree implements DynamicStatistics, LongTask {
     }
 
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
+    public void execute(GraphModel graphModel) {
         this.graphModel = graphModel;
         this.isDirected = graphModel.isDirected();
-        this.averages = new HashMap<Double, Double>();
+        this.averages = new HashMap<>();
 
         //Attributes cols
         if (!averageOnly) {
-            Table nodeTable = attributeModel.getNodeTable();
+            TimeRepresentation tr = graphModel.getConfiguration().getTimeRepresentation();
+
+            Table nodeTable = graphModel.getNodeTable();
             dynamicInDegreeColumn = nodeTable.getColumn(DYNAMIC_INDEGREE);
             dynamicOutDegreeColumn = nodeTable.getColumn(DYNAMIC_OUTDEGREE);
             dynamicDegreeColumn = nodeTable.getColumn(DYNAMIC_DEGREE);
             if (isDirected) {
                 if (dynamicInDegreeColumn == null) {
-                    dynamicInDegreeColumn = nodeTable.addColumn(DYNAMIC_INDEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.InDegree"), TimestampIntegerSet.class, null);
+                    dynamicInDegreeColumn = nodeTable.addColumn(DYNAMIC_INDEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.InDegree"), tr.equals(TimeRepresentation.INTERVAL) ? IntervalIntegerMap.class : TimestampIntegerMap.class, null);
                 }
                 if (dynamicOutDegreeColumn == null) {
-                    dynamicOutDegreeColumn = nodeTable.addColumn(DYNAMIC_OUTDEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.OutDegree"), TimestampIntegerSet.class, null);
+                    dynamicOutDegreeColumn = nodeTable.addColumn(DYNAMIC_OUTDEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.OutDegree"), tr.equals(TimeRepresentation.INTERVAL) ? IntervalIntegerMap.class : TimestampIntegerMap.class, null);
                 }
             }
             if (dynamicDegreeColumn == null) {
-                dynamicDegreeColumn = nodeTable.addColumn(DYNAMIC_DEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.Degree"), TimestampIntegerSet.class, null);
+                dynamicDegreeColumn = nodeTable.addColumn(DYNAMIC_DEGREE, NbBundle.getMessage(DynamicDegree.class, "DynamicDegree.nodecolumn.Degree"), tr.equals(TimeRepresentation.INTERVAL) ? IntervalIntegerMap.class : TimestampIntegerMap.class, null);
             }
         }
     }
@@ -174,20 +176,39 @@ public class DynamicDegree implements DynamicStatistics, LongTask {
         if (isDirected) {
             directedGraph = graphModel.getDirectedGraph(window);
         }
+        TimeRepresentation tr = graphModel.getConfiguration().getTimeRepresentation();
 
         long sum = 0;
         for (Node n : graph.getNodes().toArray()) {
             int degree = graph.getDegree(n);
 
             if (!averageOnly) {
-                n.setAttribute(dynamicDegreeColumn, degree, interval.getLow());
+                switch (tr) {
+                    case INTERVAL:
+                        n.setAttribute(dynamicDegreeColumn, degree, new Interval(interval.getLow(), interval.getLow() + tick));
+                        break;
+                    case TIMESTAMP:
+                        n.setAttribute(dynamicDegreeColumn, degree, interval.getLow());
+                        n.setAttribute(dynamicDegreeColumn, degree, interval.getHigh());
+                        break;
+                }
 
                 if (isDirected) {
                     int indegree = directedGraph.getInDegree(n);
-                    n.setAttribute(dynamicInDegreeColumn, indegree, interval.getLow());
-
                     int outdegree = directedGraph.getOutDegree(n);
-                    n.setAttribute(dynamicOutDegreeColumn, outdegree, interval.getLow());
+
+                    switch (tr) {
+                        case INTERVAL:
+                            n.setAttribute(dynamicInDegreeColumn, indegree, new Interval(interval.getLow(), interval.getLow() + tick));
+                            n.setAttribute(dynamicOutDegreeColumn, outdegree, new Interval(interval.getLow(), interval.getLow() + tick));
+                            break;
+                        case TIMESTAMP:
+                            n.setAttribute(dynamicInDegreeColumn, indegree, interval.getLow());
+                            n.setAttribute(dynamicInDegreeColumn, indegree, interval.getHigh());
+                            n.setAttribute(dynamicOutDegreeColumn, outdegree, interval.getLow());
+                            n.setAttribute(dynamicOutDegreeColumn, outdegree, interval.getHigh());
+                            break;
+                    }
                 }
             }
             sum += degree;
@@ -199,9 +220,9 @@ public class DynamicDegree implements DynamicStatistics, LongTask {
         double avg = sum / (double) graph.getNodeCount();
         averages.put(interval.getLow(), avg);
         averages.put(interval.getHigh(), avg);
-        
-        graph.setAttribute(DYNAMIC_AVGDEGREE, avg, interval.getLow());
-        graph.setAttribute(DYNAMIC_AVGDEGREE, avg, interval.getHigh());
+
+        graphModel.getGraphVisible().setAttribute(DYNAMIC_AVGDEGREE, avg, interval.getLow());
+        graphModel.getGraphVisible().setAttribute(DYNAMIC_AVGDEGREE, avg, interval.getHigh());
     }
 
     @Override

@@ -42,6 +42,7 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.desktop.statistics;
 
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
@@ -50,14 +51,11 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JPanel;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.TimeFormat;
-import org.gephi.attribute.time.Interval;
-import org.gephi.dynamic.DynamicUtilities;
-import org.gephi.dynamic.api.DynamicController;
-import org.gephi.dynamic.api.DynamicModel;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.Interval;
+import org.gephi.graph.api.TimeFormat;
 import org.gephi.lib.validation.PositiveNumberValidator;
 import org.gephi.statistics.spi.DynamicStatistics;
 import org.gephi.ui.components.richtooltip.RichTooltip;
@@ -97,7 +95,8 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
             public void mouseEntered(MouseEvent e) {
                 if (windowInfoLabel.isEnabled()) {
                     richTooltip = buildTooltip();
-                    richTooltip.showTooltip(windowInfoLabel, e.getLocationOnScreen());
+                    Point screenLocation = new Point(e.getLocationOnScreen().x, e.getLocationOnScreen().y + windowInfoLabel.getHeight());
+                    richTooltip.showTooltip(windowInfoLabel, screenLocation);
                 }
 
             }
@@ -111,19 +110,20 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
             }
         });
     }
-    
+
     public void setup(DynamicStatistics dynamicStatistics) {
         GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
         GraphModel graphModel = graphController.getGraphModel();
-        AttributeModel attributeModel = graphController.getAttributeModel();
-        TimeFormat timeFormat = attributeModel.getTimeFormat();
+        TimeFormat timeFormat = graphModel.getTimeFormat();
 
         //Bounds
-        bounds = dynamicStatistics.getBounds();
-        if (bounds == null) {
-            bounds = graphModel.getTimeBoundsVisible();
+        GraphView currentView = graphModel.getVisibleView();
+        if (currentView.isMainView()) {
+            bounds = graphModel.getTimeBounds();
+        } else {
+            bounds = currentView.getTimeInterval();
         }
-        String boundsStr = timeFormat.print(bounds.getLow())+" - "+timeFormat.print(bounds.getHigh());
+        String boundsStr = timeFormat.print(bounds.getLow()) + " - " + timeFormat.print(bounds.getHigh());
         currentIntervalLabel.setText(boundsStr);
 
         //TimeUnit
@@ -139,7 +139,7 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
 
         //Window and tick
         double initValue = 0.;
-        if(bounds.getHigh() - bounds.getLow() > 1) {
+        if (bounds.getHigh() - bounds.getLow() > 1) {
             initValue = 1.;
         }
         if (timeFormat.equals(TimeFormat.DOUBLE)) {
@@ -173,15 +173,16 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
     }
 
     public void unsetup(DynamicStatistics dynamicStatistics) {
-        DynamicController dynamicController = Lookup.getDefault().lookup(DynamicController.class);
-        DynamicModel model = dynamicController.getModel();
+        GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
+        GraphModel graphModel = graphController.getGraphModel();
+        TimeFormat timeFormat = graphModel.getTimeFormat();
 
         //Bounds is the same
         dynamicStatistics.setBounds(bounds);
 
         //Window
-        double window = 0.;
-        if (model.getTimeFormat().equals(DynamicModel.TimeFormat.DOUBLE)) {
+        double window;
+        if (timeFormat == TimeFormat.DOUBLE) {
             window = Double.parseDouble(windowTextField.getText());
         } else {
             TimeUnit timeUnit = getSelectedTimeUnit(windowTimeUnitCombo.getModel());
@@ -190,8 +191,8 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
         dynamicStatistics.setWindow(window);
 
         //Tick
-        double tick = 0.;
-        if (model.getTimeFormat().equals(DynamicModel.TimeFormat.DOUBLE)) {
+        double tick;
+        if (timeFormat == TimeFormat.DOUBLE) {
             tick = Double.parseDouble(tickTextField.getText());
         } else {
             TimeUnit timeUnit = getSelectedTimeUnit(tickTimeUnitCombo.getModel());
@@ -200,15 +201,17 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
         dynamicStatistics.setTick(tick);
 
         //Save latest selected item
-        if (!model.getTimeFormat().equals(DynamicModel.TimeFormat.DOUBLE)) {
+        if (timeFormat != TimeFormat.DOUBLE) {
             saveDefaultTimeUnits();
         }
     }
 
     public void createValidation(ValidationGroup group) {
-        DynamicController dynamicController = Lookup.getDefault().lookup(DynamicController.class);
-        DynamicModel model = dynamicController.getModel();
-        if (model.getTimeFormat().equals(DynamicModel.TimeFormat.DOUBLE)) {
+        GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
+        GraphModel graphModel = graphController.getGraphModel();
+        TimeFormat timeFormat = graphModel.getTimeFormat();
+
+        if (timeFormat == TimeFormat.DOUBLE) {
             group.add(windowTextField, Validators.REQUIRE_NON_EMPTY_STRING,
                     Validators.numberRange(Double.MIN_VALUE, (bounds.getHigh() - bounds.getLow())));
             group.add(tickTextField, Validators.REQUIRE_NON_EMPTY_STRING,
@@ -221,7 +224,7 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
             group.add(tickTextField, Validators.REQUIRE_NON_EMPTY_STRING,
                     new PositiveNumberValidator(),
                     new DateRangeValidator(tickTimeUnitCombo.getModel()),
-                    new TickUnderWindowValidator(!model.getTimeFormat().equals(DynamicModel.TimeFormat.DOUBLE)));
+                    new TickUnderWindowValidator(timeFormat != TimeFormat.DOUBLE));
         }
     }
     private final String DAYS = NbBundle.getMessage(DynamicSettingsPanel.class, "DynamicSettingsPanel.TimeUnit.DAYS");
@@ -315,10 +318,10 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
         return richTooltip;
     }
 
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
      */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -432,6 +435,7 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
             this.combo = comboBoxModel;
         }
 
+        @Override
         public boolean validate(Problems prblms, String string, String t) {
             Integer i = 0;
             try {
@@ -460,6 +464,7 @@ public class DynamicSettingsPanel extends javax.swing.JPanel {
             this.dates = dates;
         }
 
+        @Override
         public boolean validate(Problems prblms, String string, String t) {
             if (dates) {
                 Integer tick = 0;

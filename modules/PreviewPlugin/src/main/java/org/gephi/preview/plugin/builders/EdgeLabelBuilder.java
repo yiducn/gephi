@@ -43,8 +43,6 @@ package org.gephi.preview.plugin.builders;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Column;
 import org.gephi.graph.api.*;
 import org.gephi.preview.api.Item;
 import org.gephi.preview.plugin.items.EdgeLabelItem;
@@ -61,27 +59,18 @@ import org.openide.util.lookup.ServiceProvider;
 public class EdgeLabelBuilder implements ItemBuilder {
 
     @Override
-    public Item[] getItems(Graph graph, AttributeModel attributeModel) {
-
-        boolean useTextData = false;
-        for (Edge e : graph.getEdges()) {
-            TextProperties textData = e.getTextProperties();
-            if (textData != null && textData.getText() != null && !textData.getText().isEmpty()) {
-                useTextData = true;
-            }
-        }
-
+    public Item[] getItems(Graph graph) {
         //Build text
         VisualizationController vizController = Lookup.getDefault().lookup(VisualizationController.class);
         Column[] edgeColumns = vizController != null ? vizController.getEdgeTextColumns() : null;
 
-        List<Item> items = new ArrayList<Item>();
+        List<Item> items = new ArrayList<>();
         for (Edge e : graph.getEdges()) {
             EdgeLabelItem labelItem = new EdgeLabelItem(e);
             String label = getLabel(e, edgeColumns, graph.getView());
             labelItem.setData(EdgeLabelItem.LABEL, label);
             TextProperties textData = e.getTextProperties();
-            if (textData != null && useTextData) {
+            if (textData != null) {
                 if (textData.getAlpha() != 0) {
                     labelItem.setData(EdgeLabelItem.COLOR, textData.getColor());
                 }
@@ -89,7 +78,7 @@ public class EdgeLabelBuilder implements ItemBuilder {
 //                labelItem.setData(EdgeLabelItem.HEIGHT, textData.getHeight());
                 labelItem.setData(EdgeLabelItem.SIZE, textData.getSize());
                 labelItem.setData(EdgeLabelItem.VISIBLE, textData.isVisible());
-                if (textData.isVisible() && textData.getText() != null && !textData.getText().isEmpty()) {
+                if (textData.isVisible()) {
                     items.add(labelItem);
                 }
             } else if (label != null && !label.isEmpty()) {

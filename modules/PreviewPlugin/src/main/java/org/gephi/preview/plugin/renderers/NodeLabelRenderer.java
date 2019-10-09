@@ -44,7 +44,12 @@ package org.gephi.preview.plugin.renderers;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfGState;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.Shape;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Rectangle2D;
@@ -124,7 +129,7 @@ public class NodeLabelRenderer implements Renderer {
         }
 
         //Calculate font size and cache fonts
-        fontCache = new HashMap<Integer, Font>();
+        fontCache = new HashMap<>();
         Font font = properties.getFontValue(PreviewProperty.NODE_LABEL_FONT);
         for (Item item : previewModel.getItems(Item.NODE_LABEL)) {
             Float nodeSize = item.getData(NODE_SIZE);
@@ -155,11 +160,19 @@ public class NodeLabelRenderer implements Renderer {
         Float x = item.getData(NODE_X);
         Float y = item.getData(NODE_Y);
 
+        //Skip if empty
+        if (label == null || label.trim().isEmpty()) {
+            return;
+        }
+
         //Outline
         DependantColor outlineDependantColor = properties.getValue(PreviewProperty.NODE_LABEL_OUTLINE_COLOR);
         Float outlineSize = properties.getFloatValue(PreviewProperty.NODE_LABEL_OUTLINE_SIZE);
         outlineSize = outlineSize * (fontSize / 32f);
         int outlineAlpha = (int) ((properties.getFloatValue(PreviewProperty.NODE_LABEL_OUTLINE_OPACITY) / 100f) * 255f);
+        if (outlineAlpha < 0) {
+            outlineAlpha = 0;
+        }
         if (outlineAlpha > 255) {
             outlineAlpha = 255;
         }
@@ -171,6 +184,9 @@ public class NodeLabelRenderer implements Renderer {
         DependantColor boxDependantColor = properties.getValue(PreviewProperty.NODE_LABEL_BOX_COLOR);
         Color boxColor = boxDependantColor.getColor(nodeColor);
         int boxAlpha = (int) ((properties.getFloatValue(PreviewProperty.NODE_LABEL_BOX_OPACITY) / 100f) * 255f);
+        if (boxAlpha < 0) {
+            boxAlpha = 0;
+        }
         if (boxAlpha > 255) {
             boxAlpha = 255;
         }
@@ -185,6 +201,14 @@ public class NodeLabelRenderer implements Renderer {
         }
     }
 
+    @Override
+    public CanvasSize getCanvasSize(
+            final Item item,
+            final PreviewProperties properties) {
+        //FIXME Compute the label canvas
+        return new CanvasSize();
+    }
+
     public void renderG2D(G2DTarget target, String label, float x, float y, int fontSize, Color color, float outlineSize, Color outlineColor, boolean showBox, Color boxColor) {
         Graphics2D graphics = target.getGraphics();
 
@@ -194,6 +218,8 @@ public class NodeLabelRenderer implements Renderer {
         FontMetrics fm = graphics.getFontMetrics();
         float posX = x - fm.stringWidth(label) / 2f;
         float posY = y + fm.getDescent();
+
+        Shape outlineGlyph = null;
 
         //Box
         if (showBox) {
@@ -210,14 +236,18 @@ public class NodeLabelRenderer implements Renderer {
         if (outlineSize > 0) {
             FontRenderContext frc = graphics.getFontRenderContext();
             GlyphVector gv = font.createGlyphVector(frc, label);
-            Shape glyph = gv.getOutline(posX, posY);
+            outlineGlyph = gv.getOutline(posX, posY);
             graphics.setColor(outlineColor);
             graphics.setStroke(new BasicStroke(outlineSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            graphics.draw(glyph);
+            graphics.draw(outlineGlyph);
         }
 
         graphics.setColor(color);
-        graphics.drawString(label, posX, posY);
+        if (null == outlineGlyph) {
+            graphics.drawString(label, posX, posY);
+        } else {
+            graphics.fill(outlineGlyph);
+        }
     }
 
     public void renderSVG(SVGTarget target, Node node, String label, float x, float y, int fontSize, Color color, float outlineSize, Color outlineColor, boolean showBox, Color boxColor) {
@@ -227,7 +257,7 @@ public class NodeLabelRenderer implements Renderer {
         if (outlineSize > 0) {
             Text labelTextOutline = target.createTextNode(label);
             Element outlineElem = target.createElement("text");
-            outlineElem.setAttribute("class", node.getId().toString());
+            outlineElem.setAttribute("class", SVGUtils.idAsClassAttribute(node.getId()));
             outlineElem.setAttribute("x", String.valueOf(x));
             outlineElem.setAttribute("y", String.valueOf(y));
             outlineElem.setAttribute("style", "text-anchor: middle; dominant-baseline: central;");
@@ -248,7 +278,7 @@ public class NodeLabelRenderer implements Renderer {
         }
 
         Element labelElem = target.createElement("text");
-        labelElem.setAttribute("class", node.getId().toString());
+        labelElem.setAttribute("class", SVGUtils.idAsClassAttribute(node.getId()));
         labelElem.setAttribute("x", String.valueOf(x));
         labelElem.setAttribute("y", String.valueOf(y));
         labelElem.setAttribute("style", "text-anchor: middle; dominant-baseline: central;");

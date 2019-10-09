@@ -38,10 +38,11 @@ made subject to such option by the copyright holder.
 Contributor(s):
 
 Portions Copyrighted 2011 Gephi Consortium.
-*/
+ */
 package org.gephi.filters;
 
 import org.gephi.filters.spi.Filter;
+import org.gephi.filters.spi.FilterBuilder;
 import org.gephi.filters.spi.Operator;
 
 /**
@@ -50,8 +51,10 @@ import org.gephi.filters.spi.Operator;
  */
 public class OperatorQueryImpl extends AbstractQueryImpl {
 
-    private Operator operator;
+    private final Operator operator;
     private boolean simple = false; //Simple when children are only NodeFilter/EdgeFilter leaves
+
+    private String customName = null;
 
     public OperatorQueryImpl(Operator predicate) {
         this.operator = (Operator) predicate;
@@ -62,28 +65,42 @@ public class OperatorQueryImpl extends AbstractQueryImpl {
         return operator.getInputCount();
     }
 
+    @Override
     public String getName() {
+        if (customName != null) {
+            return customName;
+        }
         return operator.getName();
     }
 
     @Override
     public void setName(String name) {
+        customName = name;
     }
 
+    @Override
     public int getPropertiesCount() {
         return 0;
     }
 
+    @Override
     public String getPropertyName(int index) {
         return null;
     }
 
+    @Override
     public Object getPropertyValue(int index) {
         return null;
     }
 
+    @Override
     public Filter getFilter() {
         return operator;
+    }
+
+    @Override
+    public FilterBuilder getBuilder() {
+        return null;
     }
 
     public void setSimple(boolean simple) {

@@ -43,6 +43,7 @@ package org.gephi.desktop.context;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.GraphObserver;
 
@@ -64,25 +65,52 @@ public class ContextRefreshThread extends TimerTask {
         this.listener = listener;
 
         //Schedule
-        timer.schedule(this, 0, PERIOD);
+        timer.schedule(this, PERIOD, PERIOD);
     }
 
-    private void initObserver() {
-        if (observer == null || observer.isDestroyed()) {
+    private boolean initObserver() {
+        if (observer == null || observer.isDestroyed() || observer.getGraph().getView() != graphModel.getVisibleView()) {
+            if (observer != null && !observer.isDestroyed()) {
+                observer.destroy();
+            }
             observer = graphModel.createGraphObserver(graphModel.getGraphVisible(), false);
+            return true;
         }
+
+        return false;
     }
 
     @Override
     public void run() {
-        initObserver();
-        if (observer.hasGraphChanged()) {
-            listener.run();
+        Graph graph = graphModel.getGraph();
+        boolean runListener = false;
+
+        graph.writeLock();
+        try {
+            runListener = initObserver();
+        } finally {
+            graph.writeUnlock();
+            graph.readUnlockAll();
+        }
+
+        if (!runListener) {
+            runListener = observer.hasGraphChanged();
+        }
+        if (runListener) {
+            graph.readLock();
+            try {
+                listener.run();
+            } finally {
+                graph.readUnlockAll();
+            }
         }
     }
 
     public void shutdown() {
         timer.cancel();
+        if (observer != null && !observer.isDestroyed()) {
+            observer.destroy();
+        }
     }
 
     public GraphModel getGraphModel() {

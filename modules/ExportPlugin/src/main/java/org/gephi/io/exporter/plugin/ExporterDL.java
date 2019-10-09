@@ -45,14 +45,15 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.gephi.attribute.api.AttributeModel;
 import org.gephi.graph.api.*;
 import org.gephi.io.exporter.spi.CharacterExporter;
 import org.gephi.io.exporter.spi.GraphExporter;
 import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
+import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
 import org.openide.util.Lookup;
 
@@ -61,13 +62,10 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
     private boolean exportVisible = false;
     private Workspace workspace;
     private Writer writer;
-    private GraphModel graphModel;
-    private AttributeModel attributeModel;
     private boolean cancel = false;
     ProgressTicket progressTicket;
     private boolean useMatrixFormat = false;
     private boolean useListFormat = true;
-    private boolean exportDynamicWeight = true;
     private boolean makeSymmetricMatrix = false;
 
     public boolean isMakeSymmetricMatrix() {
@@ -106,44 +104,41 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
 
     @Override
     public boolean execute() {
-        progressTicket.start();
         GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
-        attributeModel = graphController.getAttributeModel(workspace);
-        graphModel = graphController.getGraphModel(workspace);
-        Graph graph = null;
-        if (exportVisible) {
-            graph = graphModel.getGraphVisible();
-        } else {
-            graph = graphModel.getGraph();
-        }
+        GraphModel graphModel = graphController.getGraphModel(workspace);
+        Graph graph = exportVisible ? graphModel.getGraphVisible() : graphModel.getGraph();
+
         graph.readLock();
 
-        NodeIterable nodeIterable = graph.getNodes();
+        Progress.start(progressTicket, graph.getNodeCount());
 
-        //use labels only if every node has label and no two nodes have the same label
-        boolean useLabels = true;
-        while (nodeIterable.iterator().hasNext()) {
-            if (cancel) {
-                break;
+        try {
+            //use labels only if every node has label:
+            boolean useLabels = true;
+            NodeIterable nodeIterable = graph.getNodes();
+            for (Node node : nodeIterable) {
+                if (cancel) {
+                    nodeIterable.doBreak();
+                    break;
+                }
+                useLabels &= (node.getLabel() != null);
             }
-            useLabels &= (nodeIterable.iterator().next().getLabel() != null);
-        }
-        System.err.println("use labels " + useLabels);
 
-        if (!cancel) {
-            try {
+            if (!cancel) {
                 if (useListFormat) {
                     saveAsEdgeList1(useLabels, graph);
                 } else {
                     saveAsFullMatrix(useLabels, graph);
                 }
-            } catch (IOException ex) {
-                Logger.getLogger(ExporterDL.class.getName()).log(Level.SEVERE, null, ex);
             }
+        } catch (Exception e) {
+            Logger.getLogger(ExporterDL.class.getName()).log(Level.SEVERE, null, e);
+        } finally {
+            graph.readUnlockAll();
+            Progress.finish(progressTicket);
         }
-        graph.readUnlock();
-        progressTicket.finish();
-        return true;
+
+        return !cancel;
     }
 
     @Override
@@ -163,8 +158,8 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
 
     private void saveAsEdgeList1(boolean useLabels, Graph graph) throws IOException {
 
-        HashMap<Object, String> idToLabel = new HashMap<Object, String>();//systemId to changed label
-        HashSet<String> labelUsed = new HashSet<String>();
+        HashMap<Object, String> idToLabel = new HashMap<>();//systemId to changed label
+        HashSet<String> labelUsed = new HashSet<>();
         //edgelist format forbids equal nodes
         if (useLabels) {
             for (Node node : graph.getNodes()) {
@@ -186,20 +181,17 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
         writer.write("dl\n");
         writer.write("format = edgelist1\n");
         writer.write("n = " + graph.getNodeCount() + "\n");
-        EdgeIterable edgeIterator = graph.getEdges();
         writer.write("labels embedded:\n");
         writer.write("data:\n");
-        while (edgeIterator.iterator().hasNext()) {
+        
+        EdgeIterable edgesIterable = graph.getEdges();
+        for (Edge edge : edgesIterable) {
             if (cancel) {
+                edgesIterable.doBreak();
                 break;
             }
-            Edge edge = edgeIterator.iterator().next();
-            double weight;
-            if (exportDynamicWeight) {
-                weight = edge.getWeight(graph.getView());
-            } else {
-                weight = edge.getWeight();
-            }
+            
+            double weight = edge.getWeight(graph.getView());
 
             if (useLabels) {
                 writer.write(formatLabel(idToLabel.get(edge.getSource().getId()), false) + " "
@@ -235,24 +227,15 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
         writer.write("format = fullmatrix\n");
         writer.write("n = " + graph.getNodeCount() + "\n");
 
-        HashMap<Integer, Node> idToNode = new HashMap<Integer, Node>();
+        HashMap<Integer, Node> idToNode = new HashMap<>();
         int idForNode = 0;
         for (Node node : graph.getNodes()) {
-            if (useLabels) {
-                idToNode.put(idForNode++, node);
-            } else {
-                idToNode.put(idForNode++, node);
-            }
+            idToNode.put(idForNode++, node);
         }
         int maxLengthOfEdgeWeight = 0;
         if (makeSymmetricMatrix) {
             for (Edge edge : graph.getEdges()) {
-                double weight;
-                if (exportDynamicWeight) {
-                    weight = edge.getWeight(graph.getView());
-                } else {
-                    weight = edge.getWeight();
-                }
+                double weight = edge.getWeight(graph.getView());
                 maxLengthOfEdgeWeight = Math.max(maxLengthOfEdgeWeight, Double.toString(weight).length());
             }
         }
@@ -285,11 +268,7 @@ public class ExporterDL implements GraphExporter, CharacterExporter, LongTask {
                 double weight = 0;
                 Edge edge = graph.getEdge(source, target);
                 if (edge != null) {
-                    if (exportDynamicWeight) {
-                        weight = edge.getWeight(graph.getView());
-                    } else {
-                        weight = edge.getWeight();
-                    }
+                    weight = edge.getWeight(graph.getView());
                 }
                 writer.write(Double.toString(weight) + " ");
                 if (makeSymmetricMatrix) {

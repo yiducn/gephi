@@ -38,14 +38,16 @@ made subject to such option by the copyright holder.
 Contributor(s):
 
 Portions Copyrighted 2011 Gephi Consortium.
-*/
+ */
 package org.gephi.io.importer.api;
 
 /**
+ * Graph level setting that indicates the nature of its edges.
  *
  * @author Mathieu Bastian
+ * @see ContainerLoader
  */
 public enum EdgeDirectionDefault {
 
-    DIRECTED, UNDIRECTED, MIXED;
+    DIRECTED, UNDIRECTED, MIXED
 }

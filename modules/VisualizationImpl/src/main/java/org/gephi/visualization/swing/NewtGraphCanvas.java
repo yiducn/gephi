@@ -43,39 +43,61 @@ package org.gephi.visualization.swing;
 
 import com.jogamp.newt.awt.NewtCanvasAWT;
 import com.jogamp.newt.opengl.GLWindow;
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.gl2.GLUT;
 import java.awt.Component;
-import javax.media.opengl.GL2;
-import javax.media.opengl.glu.GLU;
 import javax.swing.JPopupMenu;
 import javax.swing.ToolTipManager;
+import org.gephi.ui.utils.UIUtils;
 
 /**
  *
  * @author Mathieu Bastian
  */
-public class NewtGraphCanvas extends GraphDrawableImpl {
+public class NewtGraphCanvas extends GLAbstractListener {
 
-    private NewtCanvasAWT glCanvas;
+    private final NewtCanvasAWT glCanvas;
+    private final GLWindow glWindow;
     private final GLUT glut = new GLUT();
 
     public NewtGraphCanvas() {
         super();
-        GLWindow glWindow1 = GLWindow.create(getCaps());
-        glCanvas = new NewtCanvasAWT(glWindow1);
-        glCanvas.setFocusable(true);
-        glCanvas.setIgnoreRepaint(true);
+        glWindow = GLWindow.create(getCaps());
+//        glWindow.setSurfaceScale(new float[]{ScalableSurface.AUTOMAX_PIXELSCALE, ScalableSurface.AUTOMAX_PIXELSCALE});
+        glCanvas = new NewtCanvasAWT(glWindow);
 
-        super.initDrawable(glWindow1);
+        super.initDrawable(glWindow);
+//        glCanvas.setFocusable(true);
+//        glCanvas.setIgnoreRepaint(true);
 //        glCanvas.setMinimumSize(new Dimension(0, 0));   //Fix Canvas resize Issue
 
+//        glCanvas.setMinimumSize(new Dimension(0, 0));   //Fix Canvas resize Issue
         //Basic init
         graphComponent = (Component) glCanvas;
+        window = glWindow;
 //        graphComponent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
         //False lets the components appear on top of the canvas
         JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         ToolTipManager.sharedInstance().setLightWeightPopupEnabled(false);
+    }
+
+    @Override
+    protected void init(GL2 gl) {
+        globalScale = glWindow.getCurrentSurfaceScale(new float[2])[0];
+
+        engine.startDisplay();
+    }
+
+    @Override
+    public void reinitWindow() {
+        if (UIUtils.isAquaLookAndFeel()) {
+            // Only used when collapse panel is set visible
+            // Workaround for JOGL bug 1274
+            glCanvas.setNEWTChild(null);
+            glCanvas.setNEWTChild(glWindow);
+        }
     }
 
     @Override
@@ -91,15 +113,29 @@ public class NewtGraphCanvas extends GraphDrawableImpl {
             glu.gluOrtho2D(0, viewport.get(2), viewport.get(3), 0);
             gl.glDepthFunc(GL2.GL_ALWAYS);
             gl.glColor3i(192, 192, 192);
-            gl.glRasterPos2f(10, 15);
+            gl.glRasterPos2f(10, 15 + (getGlobalScale() > 1f ? 8 : 0));
             String fpsRound = String.valueOf((int) fps);
-            glut.glutBitmapString(GLUT.BITMAP_HELVETICA_10, fpsRound);
+            if (getGlobalScale() > 1f) {
+                glut.glutBitmapString(GLUT.BITMAP_HELVETICA_18, fpsRound);
+            } else {
+                glut.glutBitmapString(GLUT.BITMAP_HELVETICA_10, fpsRound);
+            }
 
             gl.glDepthFunc(GL2.GL_LESS);
             gl.glPopMatrix();
             gl.glMatrixMode(GL2.GL_MODELVIEW);
             gl.glPopMatrix();
         }
-        super.render3DScene(gl, glu);
+    }
+
+    @Override
+    protected void reshape3DScene(GL2 gl) {
+
+    }
+
+    @Override
+    public void destroy() {
+        super.destroy();
+        glCanvas.getNEWTChild().destroy();
     }
 }

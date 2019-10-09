@@ -64,6 +64,18 @@ interface DataTablesCommonInterface {
      * Requests the tables implementation to refresh the data of the table being shown.
      */
     void refreshCurrentTable();
+    
+    /**
+     * Sets auto-refresh suspended state. True by default.
+     * @param enabled 
+     */
+    void setAutoRefreshEnabled(boolean enabled);
+    
+    /**
+     * Gets auto-refresh suspended state. True by default.
+     * @return Current auto-refresh state
+     */
+    boolean isAutoRefreshEnabled();
 
     /**
      * Requests the tables implementation to adapt the nodes table row selection to the specified nodes.
@@ -150,14 +162,8 @@ interface DataTablesCommonInterface {
      */
     void setShowEdgesNodesLabels(boolean showEdgesNodesLabels);
 
-    public enum ExportMode {
-
-        CSV
-    }
-
     /**
      * Requests to exports current table being shown as a file.
-     * @param exportMode <code>ExportMode</code> - CSV only for now
      */
-    void exportCurrentTable(ExportMode exportMode);
+    void exportCurrentTable();
 }

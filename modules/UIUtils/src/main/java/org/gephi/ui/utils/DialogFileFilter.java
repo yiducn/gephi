@@ -45,6 +45,7 @@ package org.gephi.ui.utils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -65,13 +66,13 @@ public class DialogFileFilter extends javax.swing.filechooser.FileFilter
 			Logger.getLogger(DialogFileFilter.class.getName()).throwing(getClass().getName(), "constructor", new NullPointerException("Description cannot be null."));
 		}
 		this.description = description;
-		this.extensions = new ArrayList<String>();
+		this.extensions = new ArrayList<>();
 	}
 
 	@Override
 	public boolean accept(File file)
 	{
-		if(file.isDirectory() || extensions.size()==0) {
+		if(file.isDirectory() || extensions.isEmpty()) {
 			return true;
 		}
 		String fileName = file.getName().toLowerCase();
@@ -139,25 +140,31 @@ public class DialogFileFilter extends javax.swing.filechooser.FileFilter
 
     @Override
     public boolean equals(Object obj) {
-         if (!(obj instanceof DialogFileFilter)) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
             return false;
         }
-        DialogFileFilter s = (DialogFileFilter) obj;
-        if (s.extensions.size() != this.extensions.size()) {
+        if (getClass() != obj.getClass()) {
             return false;
         }
-        for (int i = 0; i < extensions.size(); i++) {
-            if (this.extensions.get(i) != s.extensions.get(i)) {
-                if (!this.extensions.get(i).equals(s.extensions.get(i))) {
-                    return false;
-                }
-            }
-        }
-        if(!description.equals(s.description)) {
+        final DialogFileFilter other = (DialogFileFilter) obj;
+        if (!Objects.equals(this.description, other.description)) {
             return false;
         }
-
+        if (!Objects.equals(this.extensions, other.extensions)) {
+            return false;
+        }
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 43 * hash + Objects.hashCode(this.description);
+        hash = 43 * hash + Objects.hashCode(this.extensions);
+        return hash;
     }
 
     //TODO define hashCode

@@ -46,11 +46,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import org.gephi.appearance.plugin.RankingElementColorTransformer.LinearGradient;
+import org.openide.util.Exceptions;
 import org.openide.util.NbPreferences;
 
 /**
@@ -62,14 +62,14 @@ public class RecentPalettes {
     protected static String DEFAULT_NODE_NAME = "prefs";
     public static final String COLORS = "PaletteColors";
     public static final String POSITIONS = "PalettePositions";
-    private List<LinearGradient> gradients;
-    private int maxSize;
+    private final LinkedList<LinearGradient> gradients;
+    private final int maxSize;
     protected String nodeName = null;
 
     public RecentPalettes() {
-        nodeName = "recentpalettes";
+        nodeName = "recentrankingpalettes";
         maxSize = 14;
-        gradients = new ArrayList<LinearGradient>(maxSize);
+        gradients = new LinkedList<>();
         retrieve();
     }
 
@@ -78,9 +78,9 @@ public class RecentPalettes {
         gradients.remove(gradient);
 
         // add to the top
-        gradients.add(0, gradient);
+        gradients.push(new LinearGradient(gradient.getColors(), gradient.getPositions()));
         while (gradients.size() > maxSize) {
-            gradients.remove(gradients.size() - 1);
+            gradients.removeLast();
         }
 
         store();
@@ -90,7 +90,7 @@ public class RecentPalettes {
         return gradients.toArray(new LinearGradient[0]);
     }
 
-    protected void store() {
+    private void store() {
         Preferences prefs = getPreferences();
 
         // clear the backing store
@@ -99,18 +99,19 @@ public class RecentPalettes {
         } catch (BackingStoreException ex) {
         }
 
-        for (int i = 0; i < gradients.size(); i++) {
-            LinearGradient gradient = gradients.get(i);
+        int i = 0;
+        for (LinearGradient gradient : gradients) {
             try {
                 prefs.putByteArray(COLORS + i, serializeColors(gradient.getColors()));
                 prefs.putByteArray(POSITIONS + i, serializePositions(gradient.getPositions()));
             } catch (Exception e) {
-                e.printStackTrace();
+                Exceptions.printStackTrace(e);
             }
+            i++;
         }
     }
 
-    protected void retrieve() {
+    private void retrieve() {
         gradients.clear();
         Preferences prefs = getPreferences();
 
@@ -122,9 +123,9 @@ public class RecentPalettes {
                     Color[] colors = deserializeColors(cols);
                     float[] posisitons = deserializePositions(poss);
                     LinearGradient linearGradient = new LinearGradient(colors, posisitons);
-                    gradients.add(linearGradient);
+                    gradients.addLast(linearGradient);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Exceptions.printStackTrace(e);
                 }
             } else {
                 break;
@@ -150,33 +151,35 @@ public class RecentPalettes {
 
     private byte[] serializePositions(float[] positions) throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(bos);
-        out.writeObject(positions);
-        out.close();
+        try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
+            out.writeObject(positions);
+        }
         return bos.toByteArray();
     }
 
     private float[] deserializePositions(byte[] positions) throws Exception {
         ByteArrayInputStream bis = new ByteArrayInputStream(positions);
-        ObjectInputStream in = new ObjectInputStream(bis);
-        float[] array = (float[]) in.readObject();
-        in.close();
+        float[] array;
+        try (ObjectInputStream in = new ObjectInputStream(bis)) {
+            array = (float[]) in.readObject();
+        }
         return array;
     }
 
     private byte[] serializeColors(Color[] colors) throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(bos);
-        out.writeObject(colors);
-        out.close();
+        try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
+            out.writeObject(colors);
+        }
         return bos.toByteArray();
     }
 
     private Color[] deserializeColors(byte[] colors) throws Exception {
         ByteArrayInputStream bis = new ByteArrayInputStream(colors);
-        ObjectInputStream in = new ObjectInputStream(bis);
-        Color[] array = (Color[]) in.readObject();
-        in.close();
+        Color[] array;
+        try (ObjectInputStream in = new ObjectInputStream(bis)) {
+            array = (Color[]) in.readObject();
+        }
         return array;
     }
 }

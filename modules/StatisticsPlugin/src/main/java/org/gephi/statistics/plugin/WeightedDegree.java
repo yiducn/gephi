@@ -44,15 +44,14 @@ package org.gephi.statistics.plugin;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import org.gephi.attribute.api.AttributeModel;
-import org.gephi.attribute.api.Table;
 import org.gephi.graph.api.DirectedGraph;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.NodeIterable;
+import org.gephi.graph.api.Table;
 import org.gephi.statistics.spi.Statistics;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
@@ -86,23 +85,24 @@ public class WeightedDegree implements Statistics, LongTask {
     }
 
     @Override
-    public void execute(GraphModel graphModel, AttributeModel attributeModel) {
+    public void execute(GraphModel graphModel) {
         Graph graph = graphModel.getGraphVisible();
-        execute(graph, attributeModel);
+        execute(graph);
     }
 
-    public void execute(Graph graph, AttributeModel attributeModel) {
+    public void execute(Graph graph) {
         isDirected = graph.isDirected();
         isCanceled = false;
 
         initializeDegreeDists();
-        initializeAttributeColunms(attributeModel);
+        initializeAttributeColunms(graph.getModel());
 
         graph.readLock();
-
-        avgWDegree = calculateAverageWeightedDegree(graph, isDirected, true);
-
-        graph.readUnlockAll();
+        try {
+            avgWDegree = calculateAverageWeightedDegree(graph, isDirected, true);
+        } finally {
+            graph.readUnlockAll();
+        }
     }
 
     public double calculateAverageWeightedDegree(Graph graph, boolean isDirected, boolean updateAttributes) {
@@ -116,7 +116,8 @@ public class WeightedDegree implements Statistics, LongTask {
 
         Progress.start(progress, graph.getNodeCount());
 
-        for (Node n : graph.getNodes()) {
+        NodeIterable nodesIterable = graph.getNodes();
+        for (Node n : nodesIterable) {
             double totalWeight = 0;
             if (isDirected) {
                 double totalInWeight = 0;
@@ -138,7 +139,7 @@ public class WeightedDegree implements Statistics, LongTask {
                 updateDegreeDists(totalInWeight, totalOutWeight, totalWeight);
             } else {
                 for (Edge e : graph.getEdges(n)) {
-                    totalWeight += e.getWeight();
+                    totalWeight += (e.isSelfLoop() ? 2 : 1) * e.getWeight();
                 }
                 n.setAttribute(WDEGREE, totalWeight);
                 updateDegreeDists(totalWeight);
@@ -147,25 +148,26 @@ public class WeightedDegree implements Statistics, LongTask {
             averageWeightedDegree += totalWeight;
 
             if (isCanceled) {
+                nodesIterable.doBreak();
                 break;
             }
             Progress.progress(progress);
         }
 
-        averageWeightedDegree /= (isDirected) ? 2 * graph.getNodeCount() : graph.getNodeCount();
+        averageWeightedDegree /= (isDirected ? 2.0 : 1.0) * graph.getNodeCount();
 
         return averageWeightedDegree;
 
     }
 
     private void initializeDegreeDists() {
-        degreeDist = new HashMap<Double, Integer>();
-        inDegreeDist = new HashMap<Double, Integer>();
-        outDegreeDist = new HashMap<Double, Integer>();
+        degreeDist = new HashMap<>();
+        inDegreeDist = new HashMap<>();
+        outDegreeDist = new HashMap<>();
     }
 
-    private void initializeAttributeColunms(AttributeModel attributeModel) {
-        Table nodeTable = attributeModel.getNodeTable();
+    private void initializeAttributeColunms(GraphModel graphModel) {
+        Table nodeTable = graphModel.getNodeTable();
         if (isDirected) {
             if (!nodeTable.hasColumn(WINDEGREE)) {
                 nodeTable.addColumn(WINDEGREE, NbBundle.getMessage(WeightedDegree.class, "WeightedDegree.nodecolumn.InDegree"), Double.class, 0.0);
@@ -203,7 +205,7 @@ public class WeightedDegree implements Statistics, LongTask {
 
     @Override
     public String getReport() {
-        String report = "";
+        String report;
 
         if (isDirected) {
             report = getDirectedReport();
